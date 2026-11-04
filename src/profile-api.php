@@ -2,6 +2,23 @@
 declare(strict_types=1);
 
 function profileApi(string $action,array $b): array {
+    // Powtórzenie po utracie odpowiedzi jest bezpieczne. Nie rotujemy sesji PHP:
+    // zachowujemy CSRF i odrębne uprawnienia administratora także przy ponowieniu.
+    if($action==='profile.logout') {
+        atomic(function()use($b){
+            $p=profile();
+            if($p && isset($b['expected_profile_id']) && $b['expected_profile_id']!==$p['id'])invalid('Gracz zmienił się w innej karcie. Odśwież stronę.');
+            if($p && isset($b['attempt_id'])) {
+                $s=ownedAttempt(textField($b,'attempt_id',32,32),$p['id']);
+                if($s['mode']==='test' && $s['status']==='active') {
+                    $s=tick($s,time());$s['paused']=1;$s['status']='paused';$s['revision']++;persistAttempt($s);
+                }
+            }
+            if(is_string($_COOKIE['mathmatch_device']??null))query("DELETE FROM profile_tokens WHERE hash=? AND kind='device'",[hash('sha256',$_COOKIE['mathmatch_device'])]);
+        });
+        unset($_SESSION['profile_id'],$_SESSION['profile_version'],$_SESSION['profile_expires']);
+        tokenCookie('',time()-3600);return [];
+    }
     if(in_array($action,['profile.register','profile.login','profile.pair-use'],true)) {
         if((empty($_SERVER['HTTPS'])||$_SERVER['HTTPS']==='off')&&!in_array($_SERVER['REMOTE_ADDR']??'', ['127.0.0.1','::1'],true))invalid('Logowanie wymaga HTTPS.');
         if(!rateAllowed('profile-auth',20,900))invalid('Za dużo prób. Spróbuj za 15 minut.');
@@ -14,7 +31,11 @@ function profileApi(string $action,array $b): array {
             query('INSERT INTO profiles(code,nickname,avatar,pin_hash,consent,created_at,last_active) VALUES(?,?,?,?,?,?,?)',[$code,$name,$avatar,password_hash($pin,PASSWORD_DEFAULT),$consent,time(),time()]);
             $p=query('SELECT * FROM profiles WHERE code=?',[$code])->fetch();
         } elseif($action==='profile.login') {
-            $code=strtoupper(textField($b,'code',12,12));$pin=pinField($b);throttle('code:'.$code,8,900);
+            $rawCode=$b['code']??null;
+            if(!is_string($rawCode)||!preg_match('/^[A-Fa-f0-9]{12}$/D',trim($rawCode))) {
+                invalid('Wpisz 12-znakowy kod gracza otrzymany przy tworzeniu profilu, a nie imię lub ksywkę. Jeśli go nie masz, poproś administratora o odnalezienie profilu.');
+            }
+            $code=strtoupper(trim($rawCode));$pin=pinField($b);throttle('code:'.$code,8,900);
             $p=query('SELECT * FROM profiles WHERE code=?',[$code])->fetch();
             // Koszt weryfikacji także dla nieistniejącego kodu.
             $hash=$p['pin_hash']??'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
@@ -57,12 +78,8 @@ function profileApi(string $action,array $b): array {
         });
     }
     $p=requireProfile();$pid=$p['id'];
+    if(isset($b['expected_profile_id']) && $b['expected_profile_id']!==$pid)invalid('Gracz zmienił się w innej karcie. Odśwież stronę.');
     if($p['last_active']<time()-60)query('UPDATE profiles SET last_active=? WHERE id=?',[time(),$pid]);
-    if($action==='profile.logout') {
-        if(isset($_COOKIE['mathmatch_device']))query('DELETE FROM profile_tokens WHERE hash=?',[hash('sha256',$_COOKIE['mathmatch_device'])]);
-        tokenCookie('',time()-3600);unset($_SESSION['profile_id'],$_SESSION['profile_version']);
-        if(session_status()===PHP_SESSION_ACTIVE)session_regenerate_id(true);return [];
-    }
     if($action==='profile.preferences') {query('UPDATE profiles SET sound=? WHERE id=?',[boolField($b,'sound'),$pid]);return [];}
     if($action==='profile.update') {query('UPDATE profiles SET nickname=?,avatar=?,consent=? WHERE id=?',[textField($b,'nickname',1,40),avatarField($b),boolField($b,'consent'),$pid]);return [];}
     if($action==='profile.revoke') {atomic(fn()=>revokeProfile($pid));unset($_SESSION['profile_id'],$_SESSION['profile_version']);tokenCookie('',time()-3600);return [];}

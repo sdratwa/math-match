@@ -160,8 +160,8 @@ if (is_string($api)) {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Math Match — dopasuj pojęcia</title>
-  <link rel="stylesheet" href="assets/app.css?v=3">
-  <script src="assets/app.js?v=3" defer></script>
+  <link rel="stylesheet" href="assets/app.css?v=5">
+  <script src="assets/app.js?v=5" defer></script>
 </head>
 <body>
   <main class="shell">

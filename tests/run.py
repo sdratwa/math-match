@@ -146,6 +146,116 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request(second, 'profile.login', dict(code=code, pin='123456'), b)[0], 200)
         self.assertEqual(self.request(second, 'bootstrap')[1]['profile']['code'], code)
 
+    def test_login_explains_player_code_and_preserves_authentication(self):
+        client = self.client()
+        token = self.request(client, 'bootstrap')[1]['csrf']
+        status, registered = self.request(client, 'profile.register', dict(
+            nickname='Małgosia', avatar='🦊', pin='123456', pin_repeat='123456', consent=False), token)
+        self.assertEqual(status, 200)
+        code = registered['profile']['code']
+        self.request(client, 'profile.logout', {}, token)
+        for bad in ['Małgosia', 'abcdefghijkl', '', None, 123456789012, ['name']]:
+            status, result = self.request(client, 'profile.login', dict(code=bad, pin='123456'), token)
+            self.assertEqual(status, 422)
+            self.assertIn('12-znakowy kod gracza', result['error'])
+            self.assertNotIn('Niepoprawne pole: code', result['error'])
+            self.assertIsNone(self.request(client, 'bootstrap')[1]['profile'])
+        unknown = '0' * 12 if code != '0' * 12 else '1' * 12
+        wrong_pin = self.request(client, 'profile.login', dict(code=code, pin='654321'), token)
+        wrong_code = self.request(client, 'profile.login', dict(code=unknown, pin='123456'), token)
+        self.assertEqual(wrong_pin, wrong_code)
+        self.assertEqual(wrong_pin[1]['error'], 'Niepoprawny kod lub PIN.')
+        status, result = self.request(client, 'profile.login', dict(code='  '+code.lower()+'  ', pin='123456'), token)
+        self.assertEqual(status, 200)
+        self.assertEqual(result['profile']['id'], registered['profile']['id'])
+
+    def test_shared_device_switching(self):
+        shared, csrf, quiz_id, _ = self.guest_fixture()
+        other = self.client()
+        other_csrf = self.request(other, 'bootstrap')[1]['csrf']
+        def call(action, body, status=200, client=shared, token=csrf):
+            actual, data = self.request(client, action, body, token)
+            self.assertEqual(actual, status, data)
+            return data
+        def register(client, token, pin):
+            return call('profile.register', dict(nickname='Ta sama ksywka', avatar='🐼',
+                pin=pin, pin_repeat=pin, consent=True), client=client, token=token)['profile']
+        a = register(shared, csrf, '123456')
+        b = register(other, other_csrf, '654321')
+        self.assertNotEqual(a['code'], b['code'])
+        call('profile.login', dict(code=a['code'], pin='123456'), client=other, token=other_csrf)
+        learn = call('attempt.start', dict(id=quiz_id, mode='learn', request_key=secrets.token_hex(16)))['attempt']
+        pair = learn['pairs'][0]['id']
+        call('attempt.answer', dict(attempt_id=learn['id'], term=pair, definition=pair, event_key=secrets.token_hex(16)))
+        before = call('stats', {})
+        attempt = call('attempt.start', dict(id=quiz_id, mode='test', request_key=secrets.token_hex(16)))['attempt']
+        ids = [p['id'] for p in attempt['pairs']]
+        attempt = call('attempt.save', dict(attempt_id=attempt['id'], revision=attempt['revision'], answers={ids[0]:ids[1]}))['attempt']
+        # Syntetyczne tokeny dwóch urządzeń. Tokeny nie są wypisywane.
+        import hashlib
+        raw, other_raw = secrets.token_hex(32), secrets.token_hex(32)
+        hashes = [hashlib.sha256(x.encode()).hexdigest() for x in [raw, other_raw]]
+        jar = next(h.cookiejar for h in shared.handlers if isinstance(h, urllib.request.HTTPCookieProcessor))
+        jar.set_cookie(http.cookiejar.Cookie(0, 'mathmatch_device', raw, None, False,
+            '127.0.0.1', False, False, '/', True, False, None, True, None, None, {}))
+        dbpath = Path(self.env['MATH_MATCH_STORAGE']) / 'math_match.sqlite'
+        with closing(sqlite3.connect(dbpath)) as db:
+            db.executemany('INSERT INTO profile_tokens VALUES(?,?,?,?)', [(h,a['id'],int(time.time())+600,'device') for h in hashes])
+            db.execute("CREATE TRIGGER fail_pause BEFORE UPDATE ON sessions BEGIN SELECT RAISE(ABORT, 'synthetic'); END")
+            db.commit()
+        payload = dict(attempt_id=attempt['id'], expected_profile_id=a['id'])
+        call('profile.logout', payload, 500)
+        self.assertEqual(self.request(shared, 'bootstrap')[1]['profile']['id'], a['id'])
+        with closing(sqlite3.connect(dbpath)) as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM profile_tokens').fetchone()[0], 2)
+            db.execute('DROP TRIGGER fail_pause')
+            db.commit()
+        self.assertEqual(self.request(shared, 'profile.logout', payload)[0], 403)
+        self.assertEqual(self.request(shared, 'profile.logout')[0], 405)
+        call('profile.logout', payload)
+        call('profile.logout', payload)  # Powtórzenie po utracie odpowiedzi.
+        boot = self.request(shared, 'bootstrap')[1]
+        self.assertIsNone(boot['profile'])
+        self.assertTrue(boot['admin'])
+        call('stats', {}, 422)
+        call('profile.login', dict(id=b['id']), 422)
+        call('profile.login', dict(code=b['code'], pin='000000'), 422)
+        self.assertIsNone(self.request(shared, 'bootstrap')[1]['profile'])
+        with closing(sqlite3.connect(dbpath)) as db:
+            self.assertIsNone(db.execute('SELECT 1 FROM profile_tokens WHERE hash=?', [hashes[0]]).fetchone())
+            self.assertIsNotNone(db.execute('SELECT 1 FROM profile_tokens WHERE hash=?', [hashes[1]]).fetchone())
+        self.assertEqual(self.request(other, 'bootstrap')[1]['profile']['id'], a['id'])
+        call('profile.login', dict(code=b['code'], pin='654321'))
+        self.assertEqual(call('stats', dict(id=a['id']))['history'], [])
+        call('stats', dict(expected_profile_id=a['id']), 422)
+        call('attempt.get', dict(attempt_id=attempt['id']), 422)
+        call('profile.logout', dict(attempt_id=attempt['id']), 422)
+        self.assertEqual(self.request(shared, 'bootstrap')[1]['profile']['id'], b['id'])
+        call('profile.logout', payload, 422)  # Stara karta nie wyloguje gracza B.
+        b_learn = call('attempt.start', dict(id=quiz_id, mode='learn', request_key=secrets.token_hex(16)))['attempt']
+        bp = b_learn['pairs'][0]['id']
+        call('attempt.answer', dict(attempt_id=b_learn['id'], term=bp, definition=bp, event_key=secrets.token_hex(16)))
+        b_stats = call('stats', {})
+        call('profile.logout', {})
+        call('profile.login', dict(code=a['code'], pin='123456'))
+        after = call('stats', {})
+        self.assertEqual(after['progress'], before['progress'])
+        self.assertEqual(after['events'], before['events'])
+        self.assertEqual(len(after['history']), 2)
+        resumed = call('attempt.get', dict(attempt_id=attempt['id']))['attempt']
+        self.assertEqual(resumed['status'], 'paused')
+        self.assertEqual(resumed['answers'], {ids[0]: ids[1]})
+        resumed = call('attempt.resume', dict(attempt_id=resumed['id'], revision=resumed['revision']))['attempt']
+        self.assertEqual(resumed['status'], 'active')
+        self.assertEqual(resumed['paused'], 1)
+        finished = call('attempt.finish', dict(attempt_id=resumed['id'], revision=resumed['revision'], answers={p:p for p in ids}))['attempt']
+        self.assertEqual(finished['score'], 2)
+        self.assertEqual(call('leaderboard', dict(id=quiz_id))['ranking'], [])
+        call('profile.logout', dict(attempt_id=resumed['id']))
+        call('profile.login', dict(code=b['code'], pin='654321'))
+        self.assertEqual(call('stats', {}), b_stats)
+        self.assertTrue(self.request(shared, 'bootstrap')[1]['admin'])
+
     def guest_fixture(self):
         admin = self.client()
         token = self.login(admin, self.password)

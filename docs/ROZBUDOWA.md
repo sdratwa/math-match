@@ -230,3 +230,5 @@ szczegóły nauki pokazują ostatnie 100 pozycji (agregaty obejmują całość),
 100 profili; lista administracyjna ma stronicowanie. Nie ma listy nazwanych
 urządzeń — można wylogować bieżące albo unieważnić wszystkie. Timer ma dokładność
 sekundy i konserwatywnie pomija niewykryty wcześniej odcinek długiej przerwy.
+
+Szybkie przełączanie profili, lokalną listę wyboru i rozszerzony kontrakt wylogowania opisuje [PRZELACZANIE-PROFILI.md](PRZELACZANIE-PROFILI.md).

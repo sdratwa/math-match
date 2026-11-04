@@ -46,3 +46,12 @@ nav.topactions > * { min-width: 0; max-width: 100%; white-space: normal; overflo
   .shell { padding-left: max(22px,env(safe-area-inset-left)); padding-right: max(22px,env(safe-area-inset-right)); }
   @media(max-width:670px) { .shell { padding-left: max(10px,env(safe-area-inset-left)); padding-right: max(10px,env(safe-area-inset-right)); } }
 }
+
+/* Stały dostęp do zmiany gracza również podczas przewijania testu. */
+.player-bar { position:sticky; top:0; z-index:10; display:flex; gap:8px; align-items:center; background:#eff4ff; padding:8px 0; padding-top:max(8px,env(safe-area-inset-top)); }
+.player-identity { flex:1; min-width:0; text-align:left; overflow-wrap:anywhere; }
+.player-switch { flex:none; }
+.player-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; margin:20px 0; }
+.player-card { display:flex; flex-direction:column; min-width:0; padding:12px; background:#eff4ff; border-radius:18px; }
+#profileView .player-card .btn:first-child { min-height:80px; font-size:1.1rem; }
+@media(max-width:380px) { .player-bar .btn { padding:10px 8px; font-size:.88rem; } }

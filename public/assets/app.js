@@ -36,12 +36,25 @@
     }
     return result;
   }
-  async function api(action, payload = undefined) {
+  let playerEpoch=0, switching=false;
+  const pendingRequests=new Set();
+  async function api(action,payload=undefined) {
+    if(switching)throw new Error('Trwa zmiana gracza. Poczekaj chwilę.');
+    const epoch=playerEpoch;
+    const request=requestApi(action,payload);
+    pendingRequests.add(request);
+    try {
+      const result=await request;
+      if(epoch!==playerEpoch)throw new Error('Gracz został zmieniony.');
+      return result;
+    } finally { pendingRequests.delete(request); }
+  }
+  async function requestApi(action, payload = undefined) {
     const init = { credentials: 'same-origin', cache: 'no-store' };
     if (payload !== undefined) {
       init.method = 'POST';
       init.headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf };
-      init.body = JSON.stringify(payload);
+      init.body = JSON.stringify(state.profile ? {...payload,expected_profile_id:state.profile.id} : payload);
     }
     let response;
     try { response = await fetch(`index.php?api=${encodeURIComponent(action)}`, init); }
@@ -61,7 +74,7 @@
     state.profile = data.profile;
     state.guest = !!data.guest;
     $('guestNotice').hidden = !state.guest;
-    if(state.profile)state.sound=!!state.profile.sound;
+    if(state.profile){state.sound=!!state.profile.sound;rememberPlayer(state.profile);}
     $('soundToggle').textContent=state.sound?'🔊':'🔇';
     $('soundToggle').setAttribute('aria-pressed',String(state.sound));
     $('soundToggle').setAttribute('aria-label',state.sound?'Wyłącz dźwięk':'Włącz dźwięk');
@@ -353,11 +366,15 @@
   const panel=el('section','editor-panel');panel.id='profileView';panel.hidden=true;
   $('libraryView').before(panel);
   const nav=el('nav','topactions');nav.setAttribute('aria-label','Nawigacja gracza');$('banner').before(nav);
+  const playerBar=el('div','player-bar');nav.before(playerBar);
   function resetPlayerState() {
+    playerEpoch++;
     currentTest=null; pendingPause=false; state.pendingStart=null; state.pendingAnswer=null; state.attempt=null;
     panel.replaceChildren();
     state.activeQuiz=null; state.activePairs=[]; state.selected=null; state.matched=new Set();
-    state.gameNonce++; state.sound=true;
+    state.gameNonce++; state.sound=true;state.checking=false;
+    $('gameTitle').textContent='Quiz';$('gameCounter').textContent='0 / 0';
+    $('progressFill').style.width='0%';$('progressBar').setAttribute('aria-valuenow','0');$('finish').hidden=true;setFeedback('');
     $('terms').replaceChildren(); $('descriptions').replaceChildren();
   }
   function welcomeScreen() {
@@ -367,10 +384,16 @@
     show('guestComparisonView'); $('guestHeading').focus({preventScroll:true});
   }
   function renderNavigation(){
+    playerBar.replaceChildren();playerBar.hidden=!state.profile;
+    if(state.profile){
+      const identity=actionButton(`${state.profile.avatar} ${state.profile.nickname}`,profileScreen);identity.classList.add('player-identity');
+      const change=actionButton('👥 Zmień gracza',()=>leavePlayer(true));change.classList.add('player-switch');
+      playerBar.append(identity,change);
+    }
     nav.replaceChildren();
     if(state.profile||state.guest)nav.append(actionButton('Biblioteka',()=>show('libraryView')));
     if(state.profile){
-      nav.append(actionButton(`${state.profile.avatar} ${state.profile.nickname}`,profileScreen),
+      nav.append(actionButton('Wyloguj się',()=>leavePlayer(false)),
         actionButton('Moje postępy i testy',()=>dashboard()),actionButton('Wznów naukę lub test',resumeList));
     } else {
       if(state.guest)nav.append(el('span','pill','🙂 Gość'));
@@ -394,20 +417,77 @@
     const submit=el('button','btn btn-primary',existing?'Zapisz profil':'Utwórz profil');submit.type='submit';f.append(submit);
     f.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{const d=Object.fromEntries(new FormData(f));d.consent=c.checked;d.remember=!!f.elements.remember?.checked;await api(existing?'profile.update':'profile.register',d);await refresh();profileScreen();}catch(e){alertBanner(e.message);}finally{submit.disabled=false;}});parent.append(f);return f;
   }
+  const rememberedKey='mathmatch.players.v1';
+  let rememberedPlayers=[];
+  try {
+    const saved=JSON.parse(localStorage.getItem(rememberedKey)||'[]');
+    if(Array.isArray(saved))rememberedPlayers=saved.filter(p=>p&&typeof p.code==='string'&&/^[A-F0-9]{12}$/.test(p.code)&&typeof p.nickname==='string'&&p.nickname.length<=80&&typeof p.avatar==='string'&&p.avatar.length<=8).slice(0,20).map(({code,nickname,avatar})=>({code,nickname,avatar}));
+  } catch { /* Brak dostępu do pamięci nie blokuje logowania. */ }
+  function savePlayers(){try{localStorage.setItem(rememberedKey,JSON.stringify(rememberedPlayers));}catch{/* Lista działa do zamknięcia strony. */}}
+  function rememberPlayer(p){rememberedPlayers=[{code:p.code,nickname:p.nickname,avatar:p.avatar},...rememberedPlayers.filter(x=>x.code!==p.code)].slice(0,20);savePlayers();}
+  async function leavePlayer(choose){
+    if(switching)return;
+    if((state.attempt&&state.matched.size<state.activePairs.length)||(currentTest&&currentTest.status!=='finished')){
+      if(!confirm('Przerwać bieżącą aktywność na tym urządzeniu? Zapisany postęp pozostanie. Trwający test zostanie zapauzowany i wykluczony z rankingu.'))return;
+    }
+    switching=true;
+    try {
+      await Promise.allSettled([...pendingRequests]);
+      await requestApi('profile.logout',currentTest&&!currentTest.guest&&currentTest.status!=='finished'?{attempt_id:currentTest.id}:{});
+      resetPlayerState();state.profile=null;state.guest=false;
+      $('guestNotice').hidden=true;renderNavigation();
+      if(choose)playerChooser();else welcomeScreen();
+    } catch(e){alertBanner(`${e.message} Nie potwierdzono wylogowania. Ponów zmianę gracza lub wylogowanie.`);}
+    finally{switching=false;}
+  }
+  function playerChooser(){
+    const root=screen('Kto teraz gra?');
+    root.append(el('p','muted','Wybierz swój profil i wpisz PIN. Lista jest zapamiętana tylko na tym urządzeniu.'));
+    const list=el('div','player-list');root.append(list);
+    for(const p of rememberedPlayers){
+      const card=el('article','player-card');
+      const duplicate=rememberedPlayers.some(x=>x.code!==p.code&&x.nickname===p.nickname);
+      const label=`${p.avatar} ${p.nickname}${duplicate?' · '+p.code:''}`;
+      card.append(actionButton(`${label} — Wybierz`,()=>playerPin(p)),actionButton('Usuń z tego urządzenia',()=>{
+        rememberedPlayers=rememberedPlayers.filter(x=>x.code!==p.code);savePlayers();playerChooser();
+      }));list.append(card);
+    }
+    root.append(actionButton('+ Inny gracz',()=>profileScreen('login')),actionButton('Graj jako Gość',guestComparison));
+  }
+  function playerPin(p){
+    const root=screen(`${p.avatar} ${p.nickname}`);
+    root.append(el('p','muted',`Kod gracza: ${p.code}`));
+    const form=el('form');const pin=input(form,'PIN — sześć cyfr','pin','password');
+    pin.inputMode='numeric';pin.pattern='[0-9]{6}';pin.maxLength=6;pin.required=true;pin.autocomplete='current-password';
+    const error=el('p','formerror');error.setAttribute('role','alert');
+    const submit=el('button','btn btn-primary','Graj');submit.type='submit';form.append(error,submit);root.append(form,actionButton('Wróć do wyboru gracza',playerChooser));
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();submit.disabled=true;error.textContent='';
+      try{await api('profile.login',{code:p.code,pin:pin.value});pin.value='';await refresh();show('libraryView');}
+      catch(e){pin.value='';error.textContent=e.message;pin.focus();}finally{submit.disabled=false;}
+    });pin.focus();
+  }
   function profileScreen(kind='login'){
     const root=screen('Twój profil');
     if(state.profile){
-      root.append(el('p','pill',`Kod gracza: ${state.profile.code}`),el('p','','Poproś rodzica o zapisanie kodu gracza. Kod i PIN umożliwiają powrót na innym urządzeniu.'));
+      root.append(el('p','pill',`Kod gracza: ${state.profile.code}`),el('p','','Poproś rodzica o zapisanie tego kodu. Do logowania potrzebujesz kodu gracza i PIN-u; sama ksywka nie wystarczy.'));
       profileForm(root,state.profile);
-      root.append(actionButton('Kod do przeniesienia profilu',async()=>{const d=await api('profile.pair',{});root.append(el('p','pill',`Jednorazowy kod (10 minut): ${d.code}`));}),actionButton('Wyloguj i zapomnij urządzenie',async()=>{await api('profile.logout',{});await refresh();welcomeScreen();}),actionButton('Unieważnij wszystkie sesje i urządzenia',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();welcomeScreen();}));return;
+      root.append(actionButton('Kod do przeniesienia profilu',async()=>{const d=await api('profile.pair',{});root.append(el('p','pill',`Jednorazowy kod (10 minut): ${d.code}`));}),actionButton('Wyloguj się',()=>leavePlayer(false)),actionButton('Unieważnij wszystkie sesje i urządzenia',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();welcomeScreen();}));return;
     }
     root.append(actionButton(state.guest?'← Biblioteka quizów':'← Ekran startowy',()=>state.guest?show('libraryView'):welcomeScreen()));
     if(kind==='register') {
       root.append(el('h3','','Utwórz profil'));profileForm(root);
       root.append(actionButton('Mam już profil — zaloguj się',()=>profileScreen('login')));return;
     }
+    if(rememberedPlayers.length)root.append(actionButton('Wybierz zapamiętanego gracza',playerChooser));
     root.append(el('h3','','Zaloguj się'));
-    const f=el('form');input(f,'Kod gracza','code').maxLength=12;const pin=input(f,'PIN','pin','password');pin.inputMode='numeric';pin.maxLength=6;input(f,'Zapamiętaj urządzenie (HTTPS)','remember','checkbox');
+    const f=el('form');
+    const codeInput=input(f,'Kod gracza — 12 znaków','code');
+    codeInput.autocomplete='username';codeInput.autocapitalize='characters';codeInput.spellcheck=false;
+    const hint=el('p','muted small','Wpisz kod otrzymany po utworzeniu profilu, nie imię ani ksywkę. Kod znajdziesz w swoim profilu na zalogowanym urządzeniu. Jeśli go nie masz, administrator może odszukać profil po ksywce.');
+    hint.id='playerCodeHint';codeInput.setAttribute('aria-describedby',hint.id);f.append(hint);
+    const pin=input(f,'PIN — sześć cyfr','pin','password');pin.inputMode='numeric';pin.maxLength=6;pin.autocomplete='current-password';
+    input(f,'Zapamiętaj urządzenie (HTTPS)','remember','checkbox');
     const login=el('button','btn btn-primary','Zaloguj');login.type='submit';f.append(login);f.addEventListener('submit',async e=>{e.preventDefault();login.disabled=true;try{await api('profile.login',{code:f.elements.code.value,pin:pin.value,remember:f.elements.remember.checked});await refresh();profileScreen();}catch(e){alertBanner(e.message);}finally{login.disabled=false;}});root.append(f);
     root.append(actionButton('Mam jednorazowy kod parowania',async()=>{const code=prompt('Kod z zalogowanego urządzenia');if(!code)return;await api('profile.pair-use',{code});await refresh();profileScreen();}));
     root.append(actionButton('Utwórz profil',()=>profileScreen('register')));
@@ -429,7 +509,7 @@
   let currentTest=null,testBusy=false,testVisible=false,pendingPause=false;
   const duration=n=>`${Math.floor(n/60).toString().padStart(2,'0')}:${(n%60).toString().padStart(2,'0')}`;
   async function testCommand(action,answers){
-    if(!currentTest)return;if(testBusy){if(action==='pause')pendingPause=true;return;}testBusy=true;const attemptId=currentTest.id;
+    if(switching||!currentTest)return;if(testBusy){if(action==='pause')pendingPause=true;return;}testBusy=true;const attemptId=currentTest.id;
     try{const d=await api(`${currentTest.guest?'guest':'attempt'}.${action}`,{attempt_id:currentTest.id,revision:currentTest.revision,...(answers?{answers}:{})});if(currentTest?.id!==attemptId)return;currentTest=d.attempt;if(action==='pause')pendingPause=false;state.timerReceipt=Date.now();
       if(testVisible&&(action!=='heartbeat' || currentTest.status!=='active'))testScreen(currentTest);}
     catch(e){if(action==='pause')pendingPause=true;alertBanner(e.message+(currentTest?.guest?' Wybierz „Wróć do bieżącego testu” lub rozpocznij nowy.':' W razie konfliktu wybierz „Wznów naukę lub test”.'));}

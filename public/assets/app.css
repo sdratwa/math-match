@@ -11,7 +11,9 @@
 
 /* Profile, połączone odpowiedzi i statystyki. */
 #profileView form { margin: 1rem 0 2rem; max-width: 40rem; }
-#profileView input[type=checkbox] { width: 1.5rem; height: 1.5rem; display: inline-block; margin: .5rem; }
+#profileView .checkbox-label { display:flex; align-items:flex-start; gap:12px; min-height:44px; padding:10px 0; line-height:1.5; cursor:pointer; }
+#profileView .checkbox-label > input[type=checkbox] { flex:0 0 24px; width:24px; height:24px; min-height:24px; margin:0; padding:0; }
+#profileView .checkbox-label > span { flex:1; min-width:0; overflow-wrap:anywhere; }
 #profileView .btn { min-height: 44px; margin: .25rem; white-space: normal; overflow-wrap: anywhere; }
 .connected-pair { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem; margin:.5rem 0; background:#eef4ff; border:2px solid #b9c9ef; border-radius:1rem; overflow-wrap:anywhere; }
 #profileView progress { width:100%; accent-color:#6554d8; }
@@ -62,7 +64,8 @@
 .logout-action { border-top:2px solid #dbe4f3; margin-top:8px; }
 .site-menu > summary { display:none; }
 .site-menu:not([open]) > .dropdown { display:flex; flex-direction:row; }
-h2[tabindex="-1"]:focus:not(:focus-visible) { outline:none; }
+/* Nagłówki otrzymują fokus do odczytu ekranu, ale nie są kontrolkami. */
+h2[tabindex="-1"]:focus { outline:none; }
 .success-avatar { font-size:5rem; text-align:center; }
 .resume-card { background:#fff; padding:16px; border-radius:20px; margin-bottom:20px; border:2px solid #cadbff; }
 .recovery-secret { overflow-wrap:anywhere; user-select:all; }

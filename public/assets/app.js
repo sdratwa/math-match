@@ -415,7 +415,10 @@
   }
   function screen(title,focusHeading=true){show('profileView');const heading=el('h2','',title);heading.tabIndex=-1;panel.replaceChildren(heading);if(focusHeading)heading.focus({preventScroll:true});return panel;}
   function input(form,label,name,type='text',value='') {
-    const l=el('label','fieldlabel',label),i=el('input','field');i.name=name;i.type=type;i.value=value;l.append(i);form.append(l);return i;
+    const l=el('label','fieldlabel'),i=el('input',type==='checkbox'?'':'field');i.name=name;i.type=type;i.value=value;
+    if(type==='checkbox'){l.classList.add('checkbox-label');l.append(i,el('span','',label));}
+    else{l.append(document.createTextNode(label),i);}
+    form.append(l);return i;
   }
   function passwordInput(form,label,name,autocomplete='new-password',required=true){
     const i=input(form,label,name,'password');i.autocomplete=autocomplete;i.required=required;i.maxLength=256;

@@ -97,6 +97,14 @@ function profileApi(string $action,array $b): array {
     if($action==='attempt.answer' && !rateAllowed('learning-answer',300,60))invalid('Za dużo odpowiedzi. Spróbuj za minutę.');
     if(str_starts_with($action,'attempt.'))return atomic(function()use($action,$b,$pid){
         $current=requireProfile();if($current['id']!==$pid)invalid('Sesja wygasła.');
+        if($action==='attempt.cancel') {
+            $id=textField($b,'attempt_id',32,32);
+            $attempt=query('SELECT * FROM sessions WHERE id=?',[$id])->fetch();
+            if(!$attempt)return []; // Ponowienie po utracie odpowiedzi.
+            if($attempt['profile_id']!==$pid)invalid('Nie znaleziono próby.');
+            if($attempt['mode']!=='test'||$attempt['status']==='finished')invalid('Możesz zrezygnować tylko z niezakończonego testu.');
+            query('DELETE FROM sessions WHERE id=? AND profile_id=?',[$id,$pid]);return [];
+        }
         $s=ownedAttempt(textField($b,'attempt_id',32,32),$pid);
         if($action==='attempt.answer') {if($s['mode']!=='learn')invalid('To nie sesja nauki.');return learningAnswer($s,$b);}
         if($action==='attempt.get') {

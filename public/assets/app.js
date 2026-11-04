@@ -20,6 +20,22 @@
     if(view==='libraryView')refreshResumeCard();
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
+  let dialogQueue=Promise.resolve();
+  function askDialog(message,acceptLabel='Potwierdź'){
+    const result=dialogQueue.then(()=>new Promise(resolve=>{
+      const opener=document.activeElement,dialog=el('dialog','message-dialog');
+      const body=el('div','dialogbody'),title=el('h2','','Potwierdź wybór'),text=el('p','muted',message);
+      title.id='messageDialogTitle';text.id='messageDialogText';
+      dialog.setAttribute('aria-labelledby',title.id);dialog.setAttribute('aria-describedby',text.id);
+      const actions=el('div','dialog-actions');
+      const finish=value=>{dialog.close();dialog.remove();resolve(value);setTimeout(()=>{if(opener?.isConnected&&!opener.disabled)opener.focus({preventScroll:true});},0);};
+      const cancel=actionButton('Anuluj',()=>finish(false)),accept=actionButton(acceptLabel,()=>finish(true));
+      accept.classList.add('btn-primary');actions.append(cancel,accept);body.append(title,text,actions);dialog.append(body);
+      dialog.addEventListener('cancel',e=>{e.preventDefault();finish(false);});
+      document.body.append(dialog);dialog.showModal();cancel.focus();
+    }));
+    dialogQueue=result.catch(()=>{});return result;
+  }
   function alertBanner(message) {
     $('banner').textContent = message;
     $('banner').hidden = false;
@@ -334,7 +350,7 @@
   async function deleteEditor() {
     if (!state.admin || state.editorId === null || state.busy) return;
     const quiz = state.quizzes.find((q) => q.id === state.editorId);
-    if (!window.confirm(`Na pewno usunąć zestaw „${quiz?.title ?? ''}”? Nie da się tego cofnąć.`)) return;
+    if (!await askDialog(`Na pewno usunąć zestaw „${quiz?.title ?? ''}”? Nie da się tego cofnąć.`)) return;
     state.busy = true;
     try {
       await api('delete', { id: state.editorId, revision: state.quizzes.find(q=>q.id===state.editorId)?.revision });
@@ -474,7 +490,7 @@
   async function leavePlayer(choose){
     if(switching)return;
     if((state.attempt&&state.matched.size<state.activePairs.length)||(currentTest&&currentTest.status!=='finished')){
-      if(!confirm('Przerwać bieżącą aktywność na tym urządzeniu? Zapisany postęp pozostanie. Trwający test zostanie zapauzowany i wykluczony z rankingu.'))return;
+      if(!await askDialog('Przerwać bieżącą aktywność na tym urządzeniu? Zapisany postęp pozostanie. Trwający test zostanie zapauzowany i wykluczony z rankingu.'))return;
     }
     switching=true;
     try {
@@ -525,7 +541,7 @@
       };
       root.prepend(actionButton('← Wróć do Quizów',closeSettings));
       profileForm(root,state.profile);
-      root.append(actionButton('Zamknij ustawienia',closeSettings),actionButton('Unieważnij wszystkie sesje',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();profileScreen('login');}));return;
+      root.append(actionButton('Zamknij ustawienia',closeSettings),actionButton('Unieważnij wszystkie sesje',async()=>{if(!await askDialog('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();profileScreen('login');}));return;
     }
     if(kind==='register'){const root=screen('Utwórz profil');profileForm(root);root.append(actionButton('Mam już profil — zaloguj się',()=>profileScreen('login')));return;}
     if(rememberedPlayers.length)playerChooser();else loginScreen();
@@ -544,14 +560,27 @@
     }catch(e){alertBanner(e.message);}finally{state.starting=false;}
   }
   async function resumeList(){const d=await api('attempt.list',{});const root=screen('Niedokończone sesje');root.append(el('p','','Wznowiony test zachowa wynik w historii, ale nie wejdzie do rankingu.'));for(const s of d.attempts)root.append(actionButton(`${s.title} — ${s.mode==='learn'?'Nauka':'Test'}: kontynuuj`,async()=>{const d=await api('attempt.get',{attempt_id:s.id});if(s.mode==='learn')startGame(d.attempt.quiz_id,d.attempt);else testScreen(d.attempt);}));}
-  let currentTest=null,testBusy=false,testVisible=false,pendingPause=false;
+  let currentTest=null,testBusy=false,testVisible=false,pendingPause=false,cancellingTest=false;
   const duration=n=>`${Math.floor(n/60).toString().padStart(2,'0')}:${(n%60).toString().padStart(2,'0')}`;
   async function testCommand(action,answers){
-    if(switching||!currentTest)return;if(testBusy){if(action==='pause')pendingPause=true;return;}testBusy=true;const attemptId=currentTest.id;
+    if(switching||cancellingTest||!currentTest)return;if(testBusy){if(action==='pause')pendingPause=true;return;}testBusy=true;const attemptId=currentTest.id;
     try{const d=await api(`${currentTest.guest?'guest':'attempt'}.${action}`,{attempt_id:currentTest.id,revision:currentTest.revision,...(answers?{answers}:{})});if(currentTest?.id!==attemptId)return;currentTest=d.attempt;if(action==='pause')pendingPause=false;state.timerReceipt=Date.now();
       if(testVisible&&(action!=='heartbeat' || currentTest.status!=='active'))testScreen(currentTest);}
     catch(e){if(action==='pause')pendingPause=true;alertBanner(e.message+(currentTest?.guest?' Wybierz „Wznów” w Quizach lub rozpocznij nowy.':' W razie konfliktu wybierz „Wznów” w Quizach.'));}
     finally{testBusy=false;if(pendingPause&&action!=='pause'&&currentTest?.status==='active')queueMicrotask(()=>testCommand('pause'));}
+  }
+  async function cancelTest(){
+    if(cancellingTest||!currentTest||currentTest.status==='finished')return;
+    const id=currentTest.id,guest=!!currentTest.guest;cancellingTest=true;
+    try{
+      if(!await askDialog('Zrezygnować z testu? Ta próba zostanie usunięta bez wyniku i nie będzie można jej wznowić.','Zrezygnuj'))return;
+      await Promise.allSettled([...pendingRequests]);
+      if(currentTest?.id!==id)return;
+      await api(guest?'guest.cancel':'attempt.cancel',{attempt_id:id});
+      currentTest=null;pendingPause=false;testVisible=false;panel.replaceChildren();show('libraryView');
+      const heading=$('libraryHeading');heading.tabIndex=-1;heading.focus({preventScroll:true});
+    }catch(e){alertBanner(`${e.message} Nie potwierdzono rezygnacji. Spróbuj ponownie.`);}
+    finally{cancellingTest=false;}
   }
   function testScreen(s){
     if(currentTest?.id!==s.id)pendingPause=false;currentTest=s;const root=screen(`Test: ${s.title}`,false);testVisible=true;state.timerReceipt=Date.now();const timer=el('p','pill',`Czas aktywny: ${duration(s.active_seconds)}${s.guest?' · Gość':s.paused?' · poza rankingiem':''}`);timer.id='testTimer';root.append(timer);renderNavigation();
@@ -569,9 +598,10 @@
         startGame(s.quiz_id,result.attempt);
       }));return;
     }
+    root.append(actionButton('Zrezygnuj',cancelTest));
     if(s.status==='paused'){root.append(el('p','',s.guest?'Test zapauzowany. Możesz kontynuować bieżącą grę. Wynik nie trafi do historii ani rankingu.':'Test zapauzowany. Odpowiedzi są zapisane. Ta próba pozostanie poza rankingiem.'),actionButton('Kontynuuj',()=>testCommand('resume')));return;}
     root.append(el('p','muted',s.guest?'Możesz pauzować i kontynuować bieżący test. Wyniki Gościa nie są zapisywane.':'Pauza, ukrycie strony lub wznowienie po przerwie wykluczają próbę z rankingu. Wynik pozostaje w Twojej historii.'));
-    root.append(actionButton('Pauza',async()=>{if(s.guest||s.paused||confirm('Pauza trwale wyklucza tę próbę z rankingu. Kontynuować?'))await testCommand('pause');}));
+    root.append(actionButton('Pauza',async()=>{if(s.guest||s.paused||await askDialog('Pauza trwale wyklucza tę próbę z rankingu. Kontynuować?'))await testCommand('pause');}));
     root.append(el('h3','','Połączone odpowiedzi'));
     const answers={...s.answers};
     for(const p of s.pairs){if(!answers[p.id])continue;const row=el('div','connected-pair');row.append(el('span','',`${p.term} — ${s.pairs.find(d=>d.id===answers[p.id]).description}`),actionButton('Rozłącz',()=>{delete answers[p.id];return testCommand('save',answers);}));root.append(row);}
@@ -628,9 +658,9 @@
     const f=el('form'),i=input(f,'Ksywka lub imię wyświetlane','search','text',search),b=el('button','btn','Szukaj');b.type='submit';f.append(b);f.addEventListener('submit',e=>{e.preventDefault();adminScreen(i.value).catch(e=>alertBanner(e.message));});root.append(f,actionButton('Sortuj po ksywce',()=>adminScreen(search,0,'name')));
     for(const p of d.profiles){const card=el('article','quiz-card');card.append(el('h3','',`${p.avatar} ${p.display_name} · ${p.nickname}`),el('p','',`Testy: ${p.tests} · opanowane: ${p.mastered} · średnio: ${Math.round(p.average||0)}% · ranking: ${p.consent?'tak':'nie'}`));
       card.append(actionButton('Postępy i testy',()=>dashboard(p.id)),actionButton('Odzyskaj dostęp',async()=>{
-        if(!confirm('Potwierdzono tożsamość gracza? Jego sesje zostaną unieważnione.'))return;
+        if(!await askDialog('Potwierdzono tożsamość gracza? Jego sesje zostaną unieważnione.'))return;
         const r=await api('admin.recovery',{id:p.id});await refresh();const target=screen('Jednorazowe ustawienie hasła');target.append(el('p','','Przekaż graczowi bezpiecznie. Sekret jest ważny 10 minut i działa tylko raz.'),el('p','recovery-secret',r.secret),actionButton('Gotowe — ukryj sekret',()=>adminScreen()));
-      }),actionButton('Unieważnij sesje',async()=>{await api('admin.revoke',{id:p.id});await refresh();await adminScreen();}),actionButton('Edytuj profil',()=>profileForm(screen('Edycja profilu'),p,true)),actionButton('Usuń profil',async()=>{if(confirm(`Usunąć profil ${p.display_name} i całą jego historię?`)){await api('admin.delete',{id:p.id,confirm:true});await refresh();await adminScreen(search,offset,sort);}}));root.append(card);
+      }),actionButton('Unieważnij sesje',async()=>{await api('admin.revoke',{id:p.id});await refresh();await adminScreen();}),actionButton('Edytuj profil',()=>profileForm(screen('Edycja profilu'),p,true)),actionButton('Usuń profil',async()=>{if(await askDialog(`Usunąć profil ${p.display_name} i całą jego historię?`)){await api('admin.delete',{id:p.id,confirm:true});await refresh();await adminScreen(search,offset,sort);}}));root.append(card);
     }
     if(offset)root.append(actionButton('Poprzednia strona',()=>adminScreen(search,offset-50,sort)));
     if(d.profiles.length===50)root.append(actionButton('Następna strona',()=>adminScreen(search,offset+50,sort)));

@@ -83,3 +83,14 @@ jako sprawdzony na podstawie samych testów backendu.
 - [ ] Sprawdź większy tekst, zoom 200%, ograniczone animacje i obszary dotykowe.
 - [ ] Dźwięk/wygaszenie ekranu/powrót z tła na fizycznym iOS; komunikat błędu
       pozostaje czytelny nawet gdy system blokuje dźwięk.
+
+## G. Rezygnacja i dialogi
+
+- [ ] Profil i Gość: rozpocznij Test, połącz parę, wybierz „Zrezygnuj”.
+      Anuluj i Escape pozostawiają próbę. Potwierdzenie wraca do Quizów,
+      bez wyniku, historii i karty wznowienia. Powtórz dla zapauzowanego Testu.
+- [ ] Przy odłączonej sieci rezygnacja nie pokazuje sukcesu; można ją ponowić.
+- [ ] Pauza, zmiana gracza, odwołanie sesji, usuwanie quizu/profilu i odzyskanie
+      dostępu pokazują dialog aplikacji, z przyciemnionym/rozmytym tłem.
+- [ ] Na telefonie i z klawiaturą: tekst mieści się w oknie, Tab pozostaje
+      w dialogu, Escape anuluje, a fokus po anulowaniu wraca do przycisku.

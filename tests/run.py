@@ -266,6 +266,55 @@ class ApiTests(unittest.TestCase):
             return {table: db.execute('SELECT * FROM ' + table).fetchall()
                     for table in ['profiles', 'profile_tokens', 'sessions', 'progress', 'learning_events', 'quiz_versions', 'quizzes']}
 
+    def test_cancel_test_discards_attempt(self):
+        owner, token, quiz_id, _ = self.guest_fixture()
+        data = dict(nickname='Rezygnacja', avatar='🐼', password='zielony las pachnie', password_repeat='zielony las pachnie', consent=True)
+        self.assertEqual(self.request(owner,'profile.register',data,token)[0],200)
+        other = self.client()
+        other_token = self.request(other,'bootstrap')[1]['csrf']
+        data['nickname'] = 'Drugi gracz'
+        self.assertEqual(self.request(other,'profile.register',data,other_token)[0],200)
+        def call(action, body):
+            status, result = self.request(owner,action,body,token)
+            self.assertEqual(status,200,result)
+            return result
+        def start(mode='test'):
+            return call('attempt.start',dict(id=quiz_id,mode=mode,request_key=secrets.token_hex(16)))['attempt']
+        for paused in [False,True]:
+            attempt = start()
+            ids = [p['id'] for p in attempt['pairs']]
+            attempt = call('attempt.save',dict(attempt_id=attempt['id'],revision=0,answers={ids[0]:ids[1]}))['attempt']
+            if paused:
+                call('attempt.pause',dict(attempt_id=attempt['id'],revision=attempt['revision']))
+            payload = dict(attempt_id=attempt['id'])
+            self.assertEqual(self.request(other,'attempt.cancel',payload,other_token)[0],422)
+            self.assertEqual(self.request(owner,'attempt.cancel',payload)[0],403)
+            self.assertEqual(self.request(owner,'attempt.cancel')[0],405)
+            call('attempt.cancel',payload)
+            call('attempt.cancel',payload)
+            self.assertEqual(self.request(owner,'attempt.get',payload,token)[0],422)
+        self.assertEqual(call('attempt.list',{})['attempts'],[])
+        stats = call('stats',{})
+        self.assertEqual(stats['history'],[])
+        self.assertEqual(stats['progress'],[])
+        self.assertEqual(call('leaderboard',dict(id=quiz_id))['ranking'],[])
+        finished = start()
+        call('attempt.finish',dict(attempt_id=finished['id'],revision=0,answers={p['id']:p['id'] for p in finished['pairs']}))
+        self.assertEqual(self.request(owner,'attempt.cancel',dict(attempt_id=finished['id']),token)[0],422)
+        learn = start('learn')
+        self.assertEqual(self.request(owner,'attempt.cancel',dict(attempt_id=learn['id']),token)[0],422)
+        guest = self.client()
+        gt = self.request(guest,'bootstrap')[1]['csrf']
+        self.assertEqual(self.request(guest,'guest.enter',dict(confirm=True),gt)[0],200)
+        attempt = self.request(guest,'guest.start',dict(id=quiz_id,request_key=secrets.token_hex(16)),gt)[1]['attempt']
+        payload = dict(attempt_id=attempt['id'])
+        before = self.learning_data()
+        self.assertEqual(self.request(guest,'guest.cancel',dict(attempt_id='a'*32),gt)[0],422)
+        self.assertEqual(self.request(guest,'guest.cancel',payload,gt)[0],200)
+        self.assertEqual(self.request(guest,'guest.cancel',payload,gt)[0],200)
+        self.assertEqual(self.request(guest,'guest.get',payload,gt)[0],422)
+        self.assertEqual(self.learning_data(),before)
+
     def test_guest_play_has_no_persistent_results(self):
         admin, admin_token, quiz_id, quiz = self.guest_fixture()
         client = self.client()

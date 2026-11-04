@@ -23,7 +23,7 @@ const leave = source.slice(source.indexOf('  async function leavePlayer'),source
 (async()=>{
   let reset=0,chooser=0,error='',sent;
   const c=vm.createContext({switching:false,currentTest:{id:'test-A',status:'active'},state:{profile:{id:1},guest:false},pendingRequests:new Set(),
-    confirm:()=>true,requestApi:async(action,payload)=>{sent={action,payload};throw Error('offline');},
+    askDialog:async()=>true,requestApi:async(action,payload)=>{sent={action,payload};throw Error('offline');},
     resetPlayerState:()=>reset++, $:()=>({hidden:false}),renderNavigation:()=>{},profileScreen:()=>chooser++,alertBanner:e=>error=e});
   vm.runInContext(leave,c);
   await vm.runInContext('leavePlayer(true)',c);
@@ -33,5 +33,20 @@ const leave = source.slice(source.indexOf('  async function leavePlayer'),source
   await vm.runInContext('leavePlayer(false)',c);
   assert.equal(sent.action,'profile.logout');assert.equal(sent.payload.attempt_id,'test-A');
   assert.equal(reset,1);assert.equal(c.state.profile,null);assert.equal(chooser,1);assert.equal(c.switching,false);
-  console.log('OK: karty bez sekretów, usuwanie, limit, niedostępna pamięć, wylogowanie i błąd serwera');
+  const cancelSource=source.slice(source.indexOf('  async function cancelTest'),source.indexOf('  function testScreen'));
+  let removed=0,returned=0,cancelError='';
+  const cancelContext=vm.createContext({cancellingTest:false,currentTest:{id:'test-A',status:'active'},pendingPause:true,testVisible:true,
+    pendingRequests:new Set(),askDialog:async()=>true,api:async()=>{throw Error('offline')},
+    panel:{replaceChildren:()=>removed++},show:()=>returned++,$:()=>({focus(){}}),alertBanner:m=>cancelError=m});
+  vm.runInContext(cancelSource,cancelContext);
+  await vm.runInContext('cancelTest()',cancelContext);
+  assert.equal(cancelContext.currentTest.id,'test-A');assert.equal(removed,0);assert.equal(returned,0);assert.match(cancelError,/Nie potwierdzono/);
+  cancelContext.askDialog=async()=>false;
+  await vm.runInContext('cancelTest()',cancelContext);assert.equal(returned,0);
+  cancelContext.askDialog=async()=>true;
+  cancelContext.api=async(action,payload)=>{assert.equal(action,'attempt.cancel');assert.equal(payload.attempt_id,'test-A')};
+  await vm.runInContext('cancelTest()',cancelContext);
+  assert.equal(cancelContext.currentTest,null);assert.equal(removed,1);assert.equal(returned,1);assert.equal(cancelContext.pendingPause,false);
+  assert.equal(cancelContext.cancellingTest,false);
+  console.log('OK: karty graczy, wylogowanie oraz rezygnacja: anulowanie, błąd i powodzenie');
 })().catch(e=>{console.error(e);process.exitCode=1});

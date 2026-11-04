@@ -108,3 +108,17 @@ API quizów (`create`, `update`, `delete`) i administratora (`login`, `logout`)
 pozostaje odrębne. Autoryzacja admina nie nadaje dostępu jako profil.
 Zestawy są archiwizowane. Powtórzona rejestracja nie tworzy drugiego konta dzięki
 UNIQUE; po utracie odpowiedzi można zalogować się wybraną ksywką i hasłem.
+
+## Rezygnacja z Testu
+
+`attempt.cancel` (POST, CSRF, attempt_id) atomowo usuwa własną niezakończoną
+próbę Testu. Nie dotyczy Nauki ani zakończonych wyników. Usunięta próba nie jest
+w historii, statystykach, rankingu ani liście wznowienia. Powtórzenie po utracie
+odpowiedzi jest bezpieczne. Równoległe zakończenie/rezygnacja są rozstrzygane
+transakcją SQLite: zakończonego wyniku nie można później usunąć tą operacją.
+`guest.cancel` usuwa tylko bieżący, niezakończony Test Gościa z sesji PHP.
+Nie wymaga zmiany schematu. Klient wraca do Quizów dopiero po sukcesie API.
+
+Potwierdzenia używają natywnego elementu HTML `dialog` z tłem przyciemnionym
+i rozmytym. Dialogi są kolejkowane, mają przyciski Anuluj/Potwierdź, etykiety
+dla czytników i obsługę Escape. Nie używają przeglądarkowego confirm/alert.

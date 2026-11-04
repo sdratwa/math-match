@@ -98,3 +98,11 @@ summary:focus-visible { outline:3px solid #9978f7; outline-offset:3px; }
 
 /* Wybór w Teście pozostaje widoczny niezależnie od fokusu i hover. */
 #profileView .choices .btn[aria-pressed="true"] { background:#e8e9ff; border-color:#786be9; box-shadow:0 0 0 3px #e8e5ff; }
+
+.message-dialog { width:min(480px,calc(100vw - 24px)); }
+.message-dialog::backdrop { background:#17213999; backdrop-filter:blur(4px); }
+.message-dialog h2 { font-size:1.4rem; }
+.message-dialog p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.dialog-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:24px; }
+.dialog-actions .btn { min-height:44px; }
+@media(max-width:480px){ .dialog-actions .btn { flex:1; } }

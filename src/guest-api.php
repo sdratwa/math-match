@@ -58,8 +58,13 @@ function guestApi(string $action, array $body): array
         return ['attempt' => guestTestView($s)];
     }
     $s = $_SESSION['guest_test'] ?? null;
+    if($action==='guest.cancel' && !$s){textField($body,'attempt_id',32,32);return [];}
     if (!$s || !hash_equals($s['id'], textField($body, 'attempt_id', 32, 32))) {
         invalid('Bieżący test Gościa nie jest już dostępny. Możesz rozpocząć nowy.');
+    }
+    if($action==='guest.cancel') {
+        if($s['status']==='finished')invalid('Test jest już zakończony.');
+        unset($_SESSION['guest_test']);return [];
     }
     if ($action === 'guest.get') {
         if ($s['status'] !== 'finished') {

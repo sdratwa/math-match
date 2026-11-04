@@ -422,8 +422,17 @@
   }
   function passwordInput(form,label,name,autocomplete='new-password',required=true){
     const i=input(form,label,name,'password');i.autocomplete=autocomplete;i.required=required;i.maxLength=256;
-    const toggle=actionButton('👁 Pokaż hasło',()=>{const visible=i.type==='password';i.type=visible?'text':'password';toggle.textContent=visible?'Ukryj hasło':'👁 Pokaż hasło';toggle.setAttribute('aria-pressed',String(visible));});
-    toggle.setAttribute('aria-label',`Pokaż lub ukryj: ${label}`);toggle.setAttribute('aria-pressed','false');form.append(toggle);return i;
+    const caption=i.parentElement,row=el('div','password-field');
+    i.id=`profile-${name}`;caption.htmlFor=i.id;caption.after(row);row.append(i);
+    const toggle=actionButton('👁',()=>{
+      const visible=i.type==='password';i.type=visible?'text':'password';
+      toggle.setAttribute('aria-pressed',String(visible));
+      toggle.setAttribute('aria-label',`${visible?'Ukryj':'Pokaż'} hasło: ${label}`);
+      toggle.title=visible?'Ukryj hasło':'Pokaż hasło';
+    });
+    toggle.classList.add('password-toggle');toggle.setAttribute('aria-controls',i.id);
+    toggle.setAttribute('aria-label',`Pokaż hasło: ${label}`);toggle.setAttribute('aria-pressed','false');toggle.title='Pokaż hasło';
+    row.append(toggle);return i;
   }
   function profileForm(parent,existing=null,admin=false){
     const f=el('form');f.autocomplete='on';
@@ -508,7 +517,16 @@
     f.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;busy=true;submit.disabled=true;try{await api('profile.recover',Object.fromEntries(new FormData(f)));f.reset();await refresh();show('libraryView');}catch(e){alertBanner(e.message);}finally{busy=false;submit.disabled=false;}});root.append(f);
   }
   function profileScreen(kind='login'){
-    if(state.profile){const root=screen('Ustawienia profilu');profileForm(root,state.profile);root.append(actionButton('Unieważnij wszystkie sesje',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();profileScreen('login');}));return;}
+    if(state.profile){
+      const root=screen('Ustawienia profilu');
+      const closeSettings=()=>{
+        show('libraryView');root.replaceChildren();
+        const heading=$('libraryHeading');heading.tabIndex=-1;heading.focus({preventScroll:true});
+      };
+      root.prepend(actionButton('← Wróć do Quizów',closeSettings));
+      profileForm(root,state.profile);
+      root.append(actionButton('Zamknij ustawienia',closeSettings),actionButton('Unieważnij wszystkie sesje',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();profileScreen('login');}));return;
+    }
     if(kind==='register'){const root=screen('Utwórz profil');profileForm(root);root.append(actionButton('Mam już profil — zaloguj się',()=>profileScreen('login')));return;}
     if(rememberedPlayers.length)playerChooser();else loginScreen();
   }
@@ -559,7 +577,15 @@
     for(const p of s.pairs){if(!answers[p.id])continue;const row=el('div','connected-pair');row.append(el('span','',`${p.term} — ${s.pairs.find(d=>d.id===answers[p.id]).description}`),actionButton('Rozłącz',()=>{delete answers[p.id];return testCommand('save',answers);}));root.append(row);}
     const columns=el('div','columns'),left=el('div','choices'),right=el('div','choices');columns.append(left,right);let selected=null;
     const feedback=el('p','feedback','Wybierz pojęcie, potem definicję. Poprawność poznasz po zakończeniu.');feedback.setAttribute('aria-live','polite');root.append(feedback,columns);
-    for(const p of shuffle(s.pairs.filter(p=>!answers[p.id])))left.append(actionButton(p.term,()=>{selected=p.id;feedback.textContent=`Wybrano: ${p.term}. Wybierz definicję.`;}));
+    for(const p of shuffle(s.pairs.filter(p=>!answers[p.id]))){
+      const button=actionButton(p.term,()=>{
+        if(testBusy)return;
+        selected=p.id;
+        for(const other of left.children)other.setAttribute('aria-pressed',String(other===button));
+        feedback.textContent=`Wybrano: ${p.term}. Wybierz definicję.`;
+      });
+      button.setAttribute('aria-pressed','false');left.append(button);
+    }
     for(const p of shuffle(s.pairs.filter(p=>!Object.values(answers).includes(p.id))))right.append(actionButton(p.description,async()=>{if(testBusy)return;if(!selected){feedback.textContent='Najpierw wybierz pojęcie.';return;}answers[selected]=p.id;await testCommand('save',answers);}));
     const finish=actionButton('Zakończ test',()=>testCommand('finish',answers));finish.disabled=Object.keys(answers).length!==s.pairs.length;root.append(finish);
     (finish.disabled?left.querySelector('button'):finish)?.focus({preventScroll:true});

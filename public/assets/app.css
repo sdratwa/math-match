@@ -69,7 +69,13 @@ h2[tabindex="-1"]:focus { outline:none; }
 .success-avatar { font-size:5rem; text-align:center; }
 .resume-card { background:#fff; padding:16px; border-radius:20px; margin-bottom:20px; border:2px solid #cadbff; }
 .recovery-secret { overflow-wrap:anywhere; user-select:all; }
-.fieldlabel > .btn { margin-top:6px; font-size:.85rem; }
+/* Odstęp mieści również zewnętrzne obramowanie fokusu (6 px). */
+.fieldlabel { line-height:1.5; }
+.fieldlabel > .field, .fieldlabel + .field { margin-top:8px; }
+.password-field { position:relative; min-width:0; margin-top:8px; }
+.password-field > .field { padding-right:58px; }
+#profileView .password-toggle { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:44px; min-height:44px; margin:0; padding:0; display:grid; place-items:center; border:0; border-radius:8px; background:transparent; box-shadow:none; font-size:1.2rem; }
+#profileView .password-toggle:hover { background:#eef4ff; }
 @media(max-width:960px){
   .topbar { gap:8px; }
   .topbar .eyebrow,.topbar .brandicon,.topbar h1 span { display:none; }
@@ -89,3 +95,6 @@ summary:focus-visible { outline:3px solid #9978f7; outline-offset:3px; }
   .site-menu .btn { white-space:nowrap; }
 }
 @media(min-width:961px) and (max-width:1100px){ .topbar .brandicon,.topbar .eyebrow { display:none; } .topbar h1 { font-size:1.5rem; white-space:nowrap; } }
+
+/* Wybór w Teście pozostaje widoczny niezależnie od fokusu i hover. */
+#profileView .choices .btn[aria-pressed="true"] { background:#e8e9ff; border-color:#786be9; box-shadow:0 0 0 3px #e8e5ff; }

@@ -14,7 +14,7 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 ini_set('session.cookie_httponly', '1');
 $sessionPath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
-session_name('mathmatch_session');
+session_name('mathmatch_accounts_session');
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => $sessionPath === '' ? '/' : $sessionPath . '/',
@@ -160,8 +160,8 @@ if (is_string($api)) {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Math Match — dopasuj pojęcia</title>
-  <link rel="stylesheet" href="assets/app.css?v=5">
-  <script src="assets/app.js?v=5" defer></script>
+  <link rel="stylesheet" href="assets/app.css?v=6">
+  <script src="assets/app.js?v=6" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -217,7 +217,8 @@ if (is_string($api)) {
     <p id="guestNotice" class="muted guest-notice" hidden>🙂 Gość · Grasz jako Gość — Twoje wyniki nie są zapisywane</p>
 
     <section id="libraryView" hidden aria-labelledby="libraryHeading">
-      <div class="sectionhead"><div><p class="kicker">WYBIERZ SWOJE WYZWANIE</p><h2 id="libraryHeading">Biblioteka quizów</h2><p class="muted">Wybierz zestaw i znajdź wszystkie pasujące pary.</p></div><span class="pill" id="quizCount">0 zestawów</span></div>
+      <div id="resumeCard" class="resume-card" hidden></div>
+      <div class="sectionhead"><div><p class="kicker">WYBIERZ SWOJE WYZWANIE</p><h2 id="libraryHeading">Quizy</h2><p class="muted" id="libraryGreeting">Wybierz zestaw i znajdź wszystkie pasujące pary.</p></div><span class="pill" id="quizCount">0 zestawów</span></div>
       <div class="quiz-grid" id="quizGrid" aria-live="polite"></div>
       <div class="empty" id="emptyLibrary" hidden>Nie ma jeszcze żadnych zestawów. Stwórz pierwszy! 🎨</div>
     </section>
@@ -262,7 +263,8 @@ if (is_string($api)) {
       <div class="dialoghead"><h2 id="adminHeading">Panel administratora</h2><button type="button" class="closebtn" id="closeAdmin" aria-label="Zamknij">×</button></div>
       <p class="muted">Zaloguj się, aby edytować i usuwać zapisane zestawy.</p>
       <label class="fieldlabel" for="adminPassword">Hasło administratora</label>
-      <input class="field" id="adminPassword" type="password" autocomplete="current-password" required>
+      <input type="text" name="admin_username" value="Administrator Math Match" autocomplete="username" readonly class="sr-only" tabindex="-1" aria-label="Konto administratora">
+      <input class="field" id="adminPassword" name="admin_password" type="password" autocomplete="current-password" required>
       <p class="formerror" id="loginError" role="alert"></p>
       <button type="submit" class="btn btn-primary btn-full" id="loginSubmit">Zaloguj</button>
     </form>

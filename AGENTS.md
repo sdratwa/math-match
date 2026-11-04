@@ -19,7 +19,7 @@ https://mathmatch.skycamp.pl, VPS OVH, Debian, nginx, PHP 8.4 i SQLite.
 
 - `public/index.php`: HTML, sesje, nagłówki bezpieczeństwa i API JSON.
 - `src/lib.php`: połączenie SQLite, inicjalizacja, walidacja i limity żądań.
-- `public/assets/app.js`: biblioteka, gra, formularze i klient API.
+- `public/assets/app.js`: Quizy, gra, formularze i klient API.
 - `public/assets/app.css`: responsywny wygląd i animacje.
 - `bin/admin.php`: ustawianie hasła administratora przez CLI.
 - `deploy/nginx-example.conf`: przykład konfiguracji, nie potwierdzony stan VPS.
@@ -133,14 +133,18 @@ W raporcie rozdziel wyniki wykonanych testów, analizę statyczną i niewykonane
 
 ## Rozbudowa profili i postępów
 
-Zakres produktowy obejmuje profile bez e-maila, PIN, naukę, testy i dobrowolny
+Zakres produktowy obejmuje profile bez e-maila, ksywkę i hasło, naukę, testy i dobrowolny
 ranking. Nie rozszerzaj zbierania danych poza ksywkę, avatar i postępy.
 
-- `src/migrations.php`, `bin/migrate.php`: jawna migracja CLI; zwykłe żądanie
-  nie tworzy schematu ani przykładów. Nowa instalacja zaczyna z pustą biblioteką.
+- `src/schema.php`, `bin/init.php`: jawna inicjalizacja wyłącznie pustej bazy;
+  zwykłe żądanie nie tworzy schematu ani przykładów. Schemat 2 nie ma migracji
+  ani zgodności ze starymi bazami. Istniejący plik bazy blokuje inicjalizację.
+- `src/accounts.php`: ksywka NFC + Unicode case folding, UNIQUE w SQLite,
+  opcjonalne imię wyświetlane, hasło 8–128 znaków bez obcinania i lokalna blokada
+  popularnych haseł. Wymagane intl oraz mbstring. Bez PIN-ów, kodów gracza i parowania.
 - `src/domain.php`: transakcje, wersje quizów, autoryzacja profilu i nauka.
 - `src/profile-api.php`: API profili, prób, statystyk i administracji.
-- `tests/features.php`: syntetyczna stara baza, migracja i logika domenowa.
+- `tests/features.php`, `tests/accounts.php`: pusta syntetyczna baza i logika domenowa.
 - `docs/ROZBUDOWA.md`: model danych, API, wdrożenie i testy ręczne.
 
 Niezmienne snapshoty w `quiz_versions` oceniają historyczne próby. Identyczne
@@ -159,6 +163,22 @@ administratora nie zastępuje ani nie zmienia profilu dziecka.
   należy wyłącznie do ścieżki autoryzowanego profilu. Nie importuj prób Gościa.
 - Zachowaj odrębną autoryzację administratora i aktualną politykę odczytu rankingu
   (tylko zalogowane profile). Potwierdzenie Gościa nie nadaje prywatnych uprawnień.
-- Nie dodawaj migracji dla stanu tymczasowego. Schemat pozostaje w wersji 1.
+- Nie dodawaj tabel dla stanu tymczasowego Gościa. Czysty schemat ma wersję 2.
 - `docs/GOSC.md` zawiera kontrakt, retencję i ręczny odbiór interfejsu;
   `tests/guest.php` oraz testy HTTP sprawdzają logikę bez przeglądarki.
+
+## Konta i wspólne urządzenie
+
+- Rejestracja prowadzi do osobnego powitania; logowanie do Quizów.
+- Zapamiętanie oznacza opcjonalną lokalną kartę gracza bez sekretów. Wybór karty
+  zawsze wymaga hasła; profil i statystyki pozostają na serwerze. Opcjonalny
+  token bieżącego logowania jest wyłącznie w cookie Secure/HttpOnly na HTTPS,
+  rotowany przy odtworzeniu i usuwany przy jawnym wylogowaniu.
+- Wylogowanie pauzuje wskazany Test atomowo przed wyczyszczeniem autoryzacji.
+  Nie odwołuje sesji innych urządzeń ani administratora.
+- Zmiana hasła/ksywki wymaga aktualnego hasła; admin ma osobną operację edycji.
+- Odzyskiwanie: sekret losowy, tylko hash w bazie, 10 minut i jedno użycie,
+  po wcześniejszej weryfikacji tożsamości przez administratora.
+- Reset starej testowej bazy jest wyłącznie ręczną decyzją operatora po backupie.
+  Nie wykonuj wdrożenia, commita ani pusha bez osobnego polecenia.
+- Dokumentacja wdrożenia: `docs/WDROZENIE.md`; ręczny odbiór: `docs/TESTY-RECZNE.md`.

@@ -37,8 +37,8 @@ $_SESSION=['guest_test'=>['expires'=>100]];expireGuestTest(100);
 check(!isset($_SESSION['guest_test']),'Wygasły stan jest usuwany.');
 $_SESSION=['guest_mode'=>true,'guest_test'=>['expires'=>200]];
 // signIn działa na istniejącym profilu, nigdy nie importuje wyniku gościa.
-query('INSERT INTO profiles(code,nickname,avatar,pin_hash,created_at,last_active) VALUES(?,?,?,?,?,?)',
-    ['SYNTHETIC001','Test','🦊',password_hash('123456',PASSWORD_DEFAULT),1,1]);
+query('INSERT INTO profiles(nickname,nickname_key,display_name,avatar,password_hash,created_at,last_active) VALUES(?,?,?,?,?,?,?)',
+    ['Test','test','Test','🦊',hashAccountPassword('syntetyczne hasło'),1,1]);
 $p=query('SELECT * FROM profiles')->fetch();signIn($p);
 check(!isset($_SESSION['guest_mode'])&&!isset($_SESSION['guest_test']),'Logowanie usuwa stan gościa.');
 check((int)query('SELECT COUNT(*) FROM sessions')->fetchColumn()===0,'Brak historii.');

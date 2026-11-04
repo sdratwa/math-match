@@ -22,6 +22,7 @@ function database(): PDO
     if (!extension_loaded('pdo_sqlite')) {
         throw new RuntimeException('Brakuje rozszerzenia PHP pdo_sqlite (zainstaluj php8.4-sqlite3).');
     }
+    if (!defined('MATH_MATCH_INITIALIZING') && !is_file($dir . '/math_match.sqlite')) throw new RuntimeException('Wymagana inicjalizacja CLI.');
     $pdo = new PDO('sqlite:' . $dir . '/math_match.sqlite', null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -30,9 +31,9 @@ function database(): PDO
     $pdo->exec('PRAGMA busy_timeout = 5000');
     $pdo->exec('PRAGMA journal_mode = WAL');
     $pdo->exec('PRAGMA foreign_keys = ON');
-    if (!defined('MATH_MATCH_MIGRATING')) {
+    if (!defined('MATH_MATCH_INITIALIZING')) {
         $version = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
-        if ($version !== 1) throw new RuntimeException('Wymagana migracja CLI.');
+        if ($version !== 2) throw new RuntimeException('Wymagana czysta instalacja przez bin/init.php.');
     }
     return $pdo;
 }

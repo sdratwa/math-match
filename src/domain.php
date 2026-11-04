@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/accounts.php';
 
 function query(string $sql, array $args = []): PDOStatement {
     $s=database()->prepare($sql); $s->execute($args); return $s;
@@ -15,14 +16,9 @@ function textField(array $b,string $key,int $min,int $max): string {
     if (!is_string($v)||!preg_match('//u',$v)||stringLength(trim($v))<$min||stringLength(trim($v))>$max) invalid('Niepoprawne pole: '.$key);
     return trim($v);
 }
-function pinField(array $b): string {
-    $p=$b['pin']??null;
-    if(!is_string($p)||!preg_match('/^[0-9]{6}$/D',$p)) invalid('PIN musi mieć sześć cyfr.');
-    return $p;
-}
 function avatarField(array $b): string {
     $a=$b['avatar']??'';
-    if(!in_array($a,['🦊','🐼','🐸','🦁','🐱','🚀','⭐'],true)) invalid('Wybierz avatar.');
+    if(!in_array($a,['🦄','🦊','🐼','🐸','🦁','🐱','🚀','⭐'],true)) invalid('Wybierz avatar.');
     return $a;
 }
 function boolField(array $b,string $key): int {
@@ -30,9 +26,10 @@ function boolField(array $b,string $key): int {
     return $b[$key]?1:0;
 }
 function publicProfile(array $p): array {
-    return array_intersect_key($p,array_flip(['id','code','nickname','avatar','consent','sound','created_at','last_active']));
+    return array_intersect_key($p,array_flip(['id','nickname','display_name','avatar','consent','sound','created_at','last_active']));
 }
 function profile(): ?array {
+    if (($_SESSION['profile_installation']??null)!==readSetting('installation_id')) return null;
     $id=$_SESSION['profile_id']??0;
     $p=query('SELECT * FROM profiles WHERE id=?',[$id])->fetch();
     if(($_SESSION['profile_expires']??0)<time()) return null;
@@ -43,28 +40,32 @@ function requireProfile(): array { return profile() ?? invalid('Zaloguj się do 
 function signIn(array $p): void {
     unset($_SESSION['guest_mode'], $_SESSION['guest_test']);
     if(session_status()===PHP_SESSION_ACTIVE) session_regenerate_id(true);
+    $_SESSION['profile_installation']=readSetting('installation_id');
     $_SESSION['profile_expires']=time()+12*3600;
     $_SESSION['profile_id']=$p['id']; $_SESSION['profile_version']=$p['auth_version'];
     query('UPDATE profiles SET last_active=? WHERE id=?',[time(),$p['id']]);
 }
 function tokenCookie(string $token,int $expires): void {
-    setcookie('mathmatch_device',$token,['expires'=>$expires,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Strict']);
+    setcookie('mathmatch_account_device',$token,['expires'=>$expires,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Strict']);
 }
+/** Opcjonalne zapamiętanie bieżącego uwierzytelnienia, wyłącznie przez cookie HttpOnly. */
 function rememberProfile(int $id): void {
-    if(empty($_SERVER['HTTPS'])||$_SERVER['HTTPS']==='off') invalid('Zapamiętanie urządzenia wymaga HTTPS.');
-    $raw=bin2hex(random_bytes(32)); $exp=time()+30*86400;
+    $raw=bin2hex(random_bytes(32));$expires=time()+30*86400;
     query('DELETE FROM profile_tokens WHERE expires<=?',[time()]);
-    query('INSERT INTO profile_tokens VALUES(?,?,?,?)',[hash('sha256',$raw),$id,$exp,'device']); tokenCookie($raw,$exp);
+    query('INSERT INTO profile_tokens VALUES(?,?,?,?)',[hash('sha256',$raw),$id,$expires,'device']);
+    tokenCookie($raw,$expires);
 }
 function restoreProfile(): void {
-    if(profile() || !is_string($_COOKIE['mathmatch_device']??null)) return;
-    $hash=hash('sha256',$_COOKIE['mathmatch_device']);
+    if(profile() || !is_string($_COOKIE['mathmatch_account_device']??null))return;
+    if(empty($_SERVER['HTTPS'])||$_SERVER['HTTPS']==='off')return;
+    $hash=hash('sha256',$_COOKIE['mathmatch_account_device']);
     atomic(function()use($hash){
         $t=query("SELECT * FROM profile_tokens WHERE hash=? AND kind='device' AND expires>?",[$hash,time()])->fetch();
         if(!$t)return;
-        query('DELETE FROM profile_tokens WHERE hash=?',[$hash]);
         $p=query('SELECT * FROM profiles WHERE id=?',[$t['profile_id']])->fetch();
-        rememberProfile($p['id']); signIn($p);
+        if(!$p)return;
+        query('DELETE FROM profile_tokens WHERE hash=?',[$hash]);
+        rememberProfile($p['id']);signIn($p);
     });
 }
 function revokeProfile(int $id): void {
@@ -72,7 +73,7 @@ function revokeProfile(int $id): void {
     query('DELETE FROM profile_tokens WHERE profile_id=?',[$id]);
 }
 function throttle(string $key,int $max,int $period): void {
-    // Wspólny licznik kodu nie zależy od IP ani sesji.
+    // Wspólny licznik konta nie zależy od IP ani sesji.
     $allowed=atomic(function()use($key,$max,$period){
         $key=hash('sha256',$key); $now=time();
         $r=query('SELECT * FROM rate_limits WHERE key=?',[$key])->fetch();
@@ -86,7 +87,7 @@ function saveQuiz(array $b,?int $id=null): int {
     return atomic(function()use($b,$v,$id){
         $old=$id?query('SELECT * FROM quizzes WHERE id=? AND archived_at IS NULL',[$id])->fetch():null;
         if($id && !$old)invalid('Brak zestawu.');
-        if($old && ($b['revision']??null)!==$old['revision'])invalid('Zestaw zmieniono. Odśwież bibliotekę.');
+        if($old && ($b['revision']??null)!==$old['revision'])invalid('Zestaw zmieniono. Odśwież Quizy.');
         $prior=$old?json_decode($old['pairs_json'],true):[]; $pairs=[];
         foreach($v['pairs'] as $p){
             $same=array_values(array_filter($prior,fn($o)=>$o['term']===$p['term']&&$o['description']===$p['description']));

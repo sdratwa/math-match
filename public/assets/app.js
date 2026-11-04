@@ -12,10 +12,12 @@
 
   function show(view) {
     if(view==='libraryView'&&!state.profile&&!state.guest)view='welcomeView';
+    closeMenus();
     testVisible = false;
     state.gameNonce++;
     views.forEach((id) => { $(id).hidden = id !== view; });
     $('banner').hidden = true;
+    if(view==='libraryView')refreshResumeCard();
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
   function alertBanner(message) {
@@ -74,15 +76,21 @@
     state.profile = data.profile;
     state.guest = !!data.guest;
     $('guestNotice').hidden = !state.guest;
-    if(state.profile){state.sound=!!state.profile.sound;rememberPlayer(state.profile);}
+    if(state.profile){state.sound=!!state.profile.sound;updateRememberedPlayer(state.profile);}
     $('soundToggle').textContent=state.sound?'🔊':'🔇';
     $('soundToggle').setAttribute('aria-pressed',String(state.sound));
     $('soundToggle').setAttribute('aria-label',state.sound?'Wyłącz dźwięk':'Włącz dźwięk');
     renderNavigation();
     renderLibrary();
   }
+  async function refreshResumeCard(){
+    const root=$('resumeCard');root.replaceChildren();root.hidden=true;
+    $('libraryGreeting').textContent=state.profile?`Cześć, ${state.profile.display_name}!`:'Wybierz zestaw i znajdź wszystkie pasujące pary.';
+    if(state.profile){try{const d=await api('attempt.list',{});if(d.attempts.length){root.append(el('p','','Masz niedokończoną aktywność'),actionButton('Wznów',resumeList));root.hidden=false;}}catch(e){alertBanner(e.message);}}
+    else if(state.guest&&currentTest?.guest&&currentTest.status!=='finished'){root.append(actionButton('Wznów test',async()=>{const d=await api('guest.get',{attempt_id:currentTest.id});testScreen(d.attempt);}));root.hidden=false;}
+  }
   function renderLibrary() {
-    $('adminButton').textContent = state.admin ? '🔓 Wyloguj admina' : '🔐 Admin';
+    $('adminButton').textContent = '🔐 Admin';
     $('newQuiz').hidden = !state.canCreate;
     $('quizCount').textContent = `${state.quizzes.length} ${state.quizzes.length === 1 ? 'zestaw' : 'zestawów'}`;
     const root = $('quizGrid');
@@ -335,12 +343,7 @@
     finally { state.busy = false; }
   }
   async function toggleAdmin() {
-    if (state.admin) {
-      if (!window.confirm('Wylogować administratora?')) return;
-      try { const result = await api('logout', {}); state.csrf = result.csrf; await refresh(); show('libraryView'); }
-      catch (error) { alertBanner(error.message); }
-      return;
-    }
+    if(state.admin){await adminScreen();return;}
     $('loginError').textContent = '';
     $('adminPassword').value = '';
     if (!state.adminConfigured) $('loginError').textContent = 'Administrator musi najpierw ustawić hasło na serwerze (patrz README).';
@@ -356,6 +359,7 @@
       await refresh();
       $('adminDialog').close();
       $('adminPassword').value = '';
+      await adminScreen();
     } catch (error) { $('loginError').textContent = error.message; }
     finally { $('loginSubmit').disabled = false; }
   }
@@ -365,12 +369,24 @@
   }
   const panel=el('section','editor-panel');panel.id='profileView';panel.hidden=true;
   $('libraryView').before(panel);
-  const nav=el('nav','topactions');nav.setAttribute('aria-label','Nawigacja gracza');$('banner').before(nav);
-  const playerBar=el('div','player-bar');nav.before(playerBar);
+  const nav=el('nav','player-navigation');nav.setAttribute('aria-label','Nawigacja gracza');document.querySelector('.topbar').append(nav);
+  const siteActions=document.querySelector('.topbar > .topactions');
+  const mobileMenu=el('details','site-menu');const menuSummary=el('summary','btn','☰');menuSummary.setAttribute('aria-label','Menu nawigacji');
+  const siteLinks=el('div','dropdown');siteLinks.append(actionButton('Quizy',()=>show('libraryView')),...siteActions.children);
+  mobileMenu.append(menuSummary,siteLinks);siteActions.replaceWith(mobileMenu);
+  const desktopNavigation=window.matchMedia('(min-width: 961px)');
+  function adaptNavigation(){mobileMenu.open=desktopNavigation.matches;}
+  desktopNavigation.addEventListener('change',adaptNavigation);adaptNavigation();
+  function closableMenus(){return [...document.querySelectorAll('.topbar details[open]')].filter(d=>d!==mobileMenu||!desktopNavigation.matches);}
+  function closeMenus(focus=false){closableMenus().forEach(d=>{d.open=false;if(focus)d.querySelector('summary').focus();});}
+  document.addEventListener('click',e=>{closableMenus().forEach(d=>{if(!d.contains(e.target))d.open=false;});});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenus(true);});
+  document.addEventListener('focusin',e=>{closableMenus().forEach(d=>{if(!d.contains(e.target))d.open=false;});});
   function resetPlayerState() {
     playerEpoch++;
     currentTest=null; pendingPause=false; state.pendingStart=null; state.pendingAnswer=null; state.attempt=null;
     panel.replaceChildren();
+    $('resumeCard').replaceChildren();$('resumeCard').hidden=true;$('libraryGreeting').textContent='Wybierz zestaw.';
     state.activeQuiz=null; state.activePairs=[]; state.selected=null; state.matched=new Set();
     state.gameNonce++; state.sound=true;state.checking=false;
     $('gameTitle').textContent='Quiz';$('gameCounter').textContent='0 / 0';
@@ -384,47 +400,65 @@
     show('guestComparisonView'); $('guestHeading').focus({preventScroll:true});
   }
   function renderNavigation(){
-    playerBar.replaceChildren();playerBar.hidden=!state.profile;
-    if(state.profile){
-      const identity=actionButton(`${state.profile.avatar} ${state.profile.nickname}`,profileScreen);identity.classList.add('player-identity');
-      const change=actionButton('👥 Zmień gracza',()=>leavePlayer(true));change.classList.add('player-switch');
-      playerBar.append(identity,change);
-    }
     nav.replaceChildren();
-    if(state.profile||state.guest)nav.append(actionButton('Biblioteka',()=>show('libraryView')));
     if(state.profile){
-      nav.append(actionButton('Wyloguj się',()=>leavePlayer(false)),
-        actionButton('Moje postępy i testy',()=>dashboard()),actionButton('Wznów naukę lub test',resumeList));
-    } else {
-      if(state.guest)nav.append(el('span','pill','🙂 Gość'));
-      nav.append(actionButton('Utwórz profil',()=>profileScreen('register')),actionButton('Zaloguj się',()=>profileScreen('login')));
-      if(state.guest&&currentTest?.guest&&currentTest.status!=='finished')nav.append(actionButton('Wróć do bieżącego testu',async()=>{
-        const result=await api('guest.get',{attempt_id:currentTest.id});testScreen(result.attempt);
-      }));
+      const menu=el('details','profile-menu'),summary=el('summary','btn',`${state.profile.avatar} ${state.profile.display_name} ▾`);
+      summary.replaceChildren(el('span','',state.profile.avatar),el('span','profile-name',`${state.profile.display_name} ▾`));
+      summary.setAttribute('aria-label',`Menu gracza ${state.profile.display_name}`);
+      const items=el('div','dropdown');items.append(el('strong','',`${state.profile.avatar} ${state.profile.display_name}`),
+        actionButton('👥 Zmień gracza',()=>leavePlayer(true)),actionButton('📊 Moje postępy i testy',()=>dashboard()),
+        actionButton('👤 Ustawienia profilu',()=>profileScreen()),actionButton('🚪 Wyloguj się',()=>leavePlayer(false)));
+      items.lastChild.classList.add('logout-action');menu.append(summary,items);nav.append(menu);
+    }else{
+      nav.append(actionButton(state.guest?'🙂 Gość':'Zaloguj się',()=>profileScreen('login')));
     }
-    if(state.admin)nav.append(actionButton('Statystyki administratora',adminScreen));
   }
   function screen(title,focusHeading=true){show('profileView');const heading=el('h2','',title);heading.tabIndex=-1;panel.replaceChildren(heading);if(focusHeading)heading.focus({preventScroll:true});return panel;}
   function input(form,label,name,type='text',value='') {
     const l=el('label','fieldlabel',label),i=el('input','field');i.name=name;i.type=type;i.value=value;l.append(i);form.append(l);return i;
   }
-  function profileForm(parent,existing=null){
-    const f=el('form');input(f,'Ksywka','nickname','text',existing?.nickname||'').maxLength=40;
-    const l=el('label','fieldlabel','Avatar'),a=el('select','field');a.name='avatar';for(const v of ['🦊','🐼','🐸','🦁','🐱','🚀','⭐']){const o=el('option','',v);o.value=v;a.append(o);}a.value=existing?.avatar||'🦊';l.append(a);f.append(l);
-    if(!existing){for(const name of ['pin','pin_repeat']){const i=input(f,name==='pin'?'PIN — sześć cyfr':'Powtórz PIN',name,'password');i.inputMode='numeric';i.pattern='[0-9]{6}';i.maxLength=6;i.autocomplete='new-password';}input(f,'Zapamiętaj to urządzenie (HTTPS)','remember','checkbox');}
-    const c=input(f,'Decyzja rodzica/opiekuna: zgadzam się na wyświetlanie ksywki i wyników w rankingu','consent','checkbox');c.checked=!!existing?.consent;
-    f.append(el('p','muted','Ranking jest widoczny dla zalogowanych graczy. Zaznaczenie nie potwierdza tożsamości osoby dorosłej.'));
-    const submit=el('button','btn btn-primary',existing?'Zapisz profil':'Utwórz profil');submit.type='submit';f.append(submit);
-    f.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{const d=Object.fromEntries(new FormData(f));d.consent=c.checked;d.remember=!!f.elements.remember?.checked;await api(existing?'profile.update':'profile.register',d);await refresh();profileScreen();}catch(e){alertBanner(e.message);}finally{submit.disabled=false;}});parent.append(f);return f;
+  function passwordInput(form,label,name,autocomplete='new-password',required=true){
+    const i=input(form,label,name,'password');i.autocomplete=autocomplete;i.required=required;i.maxLength=256;
+    const toggle=actionButton('👁 Pokaż hasło',()=>{const visible=i.type==='password';i.type=visible?'text':'password';toggle.textContent=visible?'Ukryj hasło':'👁 Pokaż hasło';toggle.setAttribute('aria-pressed',String(visible));});
+    toggle.setAttribute('aria-label',`Pokaż lub ukryj: ${label}`);toggle.setAttribute('aria-pressed','false');form.append(toggle);return i;
   }
-  const rememberedKey='mathmatch.players.v1';
+  function profileForm(parent,existing=null,admin=false){
+    const f=el('form');f.autocomplete='on';
+    const nick=input(f,'Ksywka do logowania','nickname','text',existing?.nickname||'');nick.maxLength=40;nick.required=true;nick.autocomplete='username';nick.autocapitalize='none';nick.spellcheck=false;
+    input(f,'Imię wyświetlane (opcjonalne)','display_name','text',existing?.display_name||'').maxLength=40;
+    const l=el('label','fieldlabel','Avatar'),a=el('select','field');a.name='avatar';for(const v of ['🦄','🦊','🐼','🐸','🦁','🐱','🚀','⭐']){const o=el('option','',v);o.value=v;a.append(o);}a.value=existing?.avatar||'🦄';l.append(a);f.append(l);
+    if(!admin){
+      if(existing)passwordInput(f,'Aktualne hasło (przy zmianie ksywki lub hasła)','current_password','current-password',false);
+      passwordInput(f,existing?'Nowe hasło (opcjonalne)':'Hasło — minimum 8 znaków','password','new-password',!existing);
+      passwordInput(f,existing?'Powtórz nowe hasło':'Powtórz hasło','password_repeat','new-password',!existing);
+      f.append(el('p','muted','Hasło: 8–128 znaków. Możesz użyć kilku słów, spacji i polskich liter.'));
+    }
+    if(!existing){input(f,'Zapamiętaj urządzenie','remember','checkbox');f.append(el('p','muted','Twoja ksywka i hasło pozwolą Ci wrócić do swoich wyników na każdym urządzeniu.'));}
+    if(existing&&!admin){const sound=input(f,'Dźwięki','sound','checkbox');sound.checked=!!existing.sound;}
+    const c=input(f,'Decyzja opiekuna: zgoda na imię wyświetlane i wyniki w rankingu','consent','checkbox');c.checked=!!existing?.consent;
+    f.append(el('p','muted','Ranking jest widoczny dla zalogowanych graczy. Zaznaczenie nie potwierdza tożsamości osoby dorosłej.'));
+    const submit=el('button','btn btn-primary',existing?'Zapisz zmiany':'Utwórz profil');submit.type='submit';f.append(submit);
+    let submitting=false;
+    f.addEventListener('submit',async e=>{
+      e.preventDefault();if(submitting)return;submitting=true;submit.disabled=true;
+      try{
+        const d=Object.fromEntries(new FormData(f));d.consent=c.checked;const rememberCard=!!f.elements.remember?.checked;d.remember=rememberCard&&location.protocol==='https:';
+        if(f.elements.sound)d.sound=f.elements.sound.checked;if(admin)d.id=existing.id;
+        const r=await api(admin?'admin.update':existing?'profile.update':'profile.register',d);
+        if(!existing&&rememberCard)rememberPlayer(r.profile);
+        await refresh();
+        if(admin){await adminScreen();return;}
+        if(existing){profileScreen();alertBanner('Zmiany zostały zapisane ✓');}
+        else{const root=screen(`🎉 Witaj w Math Match, ${state.profile.display_name}!`);root.append(el('div','success-avatar',state.profile.avatar),el('p','','Twój profil jest gotowy! Od teraz będziemy pamiętać Twoje wyniki i postępy.'),actionButton('🚀 Zaczynamy!',()=>show('libraryView')));}
+      }catch(e){alertBanner(e.message);}finally{submitting=false;submit.disabled=false;}
+    });parent.append(f);return f;
+  }
+  const rememberedKey='mathmatch.players.v2';
   let rememberedPlayers=[];
-  try {
-    const saved=JSON.parse(localStorage.getItem(rememberedKey)||'[]');
-    if(Array.isArray(saved))rememberedPlayers=saved.filter(p=>p&&typeof p.code==='string'&&/^[A-F0-9]{12}$/.test(p.code)&&typeof p.nickname==='string'&&p.nickname.length<=80&&typeof p.avatar==='string'&&p.avatar.length<=8).slice(0,20).map(({code,nickname,avatar})=>({code,nickname,avatar}));
-  } catch { /* Brak dostępu do pamięci nie blokuje logowania. */ }
+  try{const saved=JSON.parse(localStorage.getItem(rememberedKey)||'[]');if(Array.isArray(saved))rememberedPlayers=saved.filter(p=>Number.isInteger(p?.id)&&typeof p.nickname==='string'&&p.nickname.length<=80&&typeof p.display_name==='string'&&p.display_name.length<=80&&typeof p.avatar==='string'&&p.avatar.length<=8).slice(0,20).map(({id,nickname,display_name,avatar})=>({id,nickname,display_name,avatar}));}catch{/* Pamięć lokalna jest opcjonalna. */}
   function savePlayers(){try{localStorage.setItem(rememberedKey,JSON.stringify(rememberedPlayers));}catch{/* Lista działa do zamknięcia strony. */}}
-  function rememberPlayer(p){rememberedPlayers=[{code:p.code,nickname:p.nickname,avatar:p.avatar},...rememberedPlayers.filter(x=>x.code!==p.code)].slice(0,20);savePlayers();}
+  function rememberPlayer(p){rememberedPlayers=[{id:p.id,nickname:p.nickname,display_name:p.display_name,avatar:p.avatar},...rememberedPlayers.filter(x=>x.id!==p.id)].slice(0,20);savePlayers();}
+  function updateRememberedPlayer(p){if(rememberedPlayers.some(x=>x.id===p.id))rememberPlayer(p);}
   async function leavePlayer(choose){
     if(switching)return;
     if((state.attempt&&state.matched.size<state.activePairs.length)||(currentTest&&currentTest.status!=='finished')){
@@ -436,61 +470,44 @@
       await requestApi('profile.logout',currentTest&&!currentTest.guest&&currentTest.status!=='finished'?{attempt_id:currentTest.id}:{});
       resetPlayerState();state.profile=null;state.guest=false;
       $('guestNotice').hidden=true;renderNavigation();
-      if(choose)playerChooser();else welcomeScreen();
+      profileScreen('login');
     } catch(e){alertBanner(`${e.message} Nie potwierdzono wylogowania. Ponów zmianę gracza lub wylogowanie.`);}
     finally{switching=false;}
   }
   function playerChooser(){
-    const root=screen('Kto teraz gra?');
-    root.append(el('p','muted','Wybierz swój profil i wpisz PIN. Lista jest zapamiętana tylko na tym urządzeniu.'));
+    const root=screen('Kto dzisiaj gra? 🎮');
+    root.append(el('p','muted','Wybierz swój avatar i wpisz hasło.'));
     const list=el('div','player-list');root.append(list);
     for(const p of rememberedPlayers){
-      const card=el('article','player-card');
-      const duplicate=rememberedPlayers.some(x=>x.code!==p.code&&x.nickname===p.nickname);
-      const label=`${p.avatar} ${p.nickname}${duplicate?' · '+p.code:''}`;
-      card.append(actionButton(`${label} — Wybierz`,()=>playerPin(p)),actionButton('Usuń z tego urządzenia',()=>{
-        rememberedPlayers=rememberedPlayers.filter(x=>x.code!==p.code);savePlayers();playerChooser();
-      }));list.append(card);
+      const card=el('article','player-card');card.append(actionButton(`${p.avatar} ${p.display_name}`,()=>loginScreen(p)),
+        actionButton('Usuń z tego urządzenia',()=>{rememberedPlayers=rememberedPlayers.filter(x=>x.id!==p.id);savePlayers();profileScreen('login');}));list.append(card);
     }
-    root.append(actionButton('+ Inny gracz',()=>profileScreen('login')),actionButton('Graj jako Gość',guestComparison));
+    root.append(actionButton('Inny gracz',()=>loginScreen()),actionButton('Utwórz profil',()=>profileScreen('register')),actionButton('Graj jako Gość',guestComparison),actionButton('← Ekran startowy',welcomeScreen));
   }
-  function playerPin(p){
-    const root=screen(`${p.avatar} ${p.nickname}`);
-    root.append(el('p','muted',`Kod gracza: ${p.code}`));
-    const form=el('form');const pin=input(form,'PIN — sześć cyfr','pin','password');
-    pin.inputMode='numeric';pin.pattern='[0-9]{6}';pin.maxLength=6;pin.required=true;pin.autocomplete='current-password';
-    const error=el('p','formerror');error.setAttribute('role','alert');
-    const submit=el('button','btn btn-primary','Graj');submit.type='submit';form.append(error,submit);root.append(form,actionButton('Wróć do wyboru gracza',playerChooser));
-    form.addEventListener('submit',async e=>{
-      e.preventDefault();submit.disabled=true;error.textContent='';
-      try{await api('profile.login',{code:p.code,pin:pin.value});pin.value='';await refresh();show('libraryView');}
-      catch(e){pin.value='';error.textContent=e.message;pin.focus();}finally{submit.disabled=false;}
-    });pin.focus();
+  function loginScreen(player=null){
+    const root=screen(player?`${player.avatar} ${player.display_name}`:'Witaj ponownie! 👋');const f=el('form');
+    const nick=input(f,'Ksywka','nickname','text',player?.nickname||'');nick.autocomplete='username';nick.autocapitalize='none';nick.spellcheck=false;nick.required=true;nick.maxLength=40;
+    if(player){nick.readOnly=true;nick.parentElement.hidden=true;}
+    const password=passwordInput(f,'Hasło','password','current-password');
+    const remember=input(f,'Zapamiętaj urządzenie','remember','checkbox');remember.checked=!!player;
+    const submit=el('button','btn btn-primary','Zaloguj się');submit.type='submit';f.append(submit);let submitting=false;
+    f.addEventListener('submit',async e=>{e.preventDefault();if(submitting)return;submitting=true;submit.disabled=true;
+      try{const r=await api('profile.login',{nickname:player?player.nickname:nick.value,password:password.value,remember:remember.checked&&location.protocol==='https:',...(player?{remembered_id:player.id}:{})});password.value='';if(remember.checked)rememberPlayer(r.profile);await refresh();show('libraryView');}
+      catch(e){password.value='';alertBanner(e.message);password.focus();}finally{submitting=false;submit.disabled=false;}
+    });root.append(f,actionButton('Nie masz jeszcze profilu? Utwórz go',()=>profileScreen('register')),actionButton('Pomoc w odzyskaniu dostępu',recoveryScreen),actionButton('← Ekran startowy',welcomeScreen));
+    if(rememberedPlayers.length)root.append(actionButton('Wybierz zapamiętanego gracza',playerChooser));
+  }
+  function recoveryScreen(){
+    const root=screen('Ustaw nowe hasło z pomocą administratora');root.append(el('p','','Poproś administratora o potwierdzenie Twojej tożsamości i jednorazowy sekret ważny 10 minut.'));
+    const f=el('form');const secret=input(f,'Sekret od administratora','secret');secret.autocomplete='off';secret.required=true;
+    passwordInput(f,'Nowe hasło','password');passwordInput(f,'Powtórz nowe hasło','password_repeat');
+    const submit=el('button','btn btn-primary','Ustaw hasło');submit.type='submit';f.append(submit);let busy=false;
+    f.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;busy=true;submit.disabled=true;try{await api('profile.recover',Object.fromEntries(new FormData(f)));f.reset();await refresh();show('libraryView');}catch(e){alertBanner(e.message);}finally{busy=false;submit.disabled=false;}});root.append(f);
   }
   function profileScreen(kind='login'){
-    const root=screen('Twój profil');
-    if(state.profile){
-      root.append(el('p','pill',`Kod gracza: ${state.profile.code}`),el('p','','Poproś rodzica o zapisanie tego kodu. Do logowania potrzebujesz kodu gracza i PIN-u; sama ksywka nie wystarczy.'));
-      profileForm(root,state.profile);
-      root.append(actionButton('Kod do przeniesienia profilu',async()=>{const d=await api('profile.pair',{});root.append(el('p','pill',`Jednorazowy kod (10 minut): ${d.code}`));}),actionButton('Wyloguj się',()=>leavePlayer(false)),actionButton('Unieważnij wszystkie sesje i urządzenia',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();welcomeScreen();}));return;
-    }
-    root.append(actionButton(state.guest?'← Biblioteka quizów':'← Ekran startowy',()=>state.guest?show('libraryView'):welcomeScreen()));
-    if(kind==='register') {
-      root.append(el('h3','','Utwórz profil'));profileForm(root);
-      root.append(actionButton('Mam już profil — zaloguj się',()=>profileScreen('login')));return;
-    }
-    if(rememberedPlayers.length)root.append(actionButton('Wybierz zapamiętanego gracza',playerChooser));
-    root.append(el('h3','','Zaloguj się'));
-    const f=el('form');
-    const codeInput=input(f,'Kod gracza — 12 znaków','code');
-    codeInput.autocomplete='username';codeInput.autocapitalize='characters';codeInput.spellcheck=false;
-    const hint=el('p','muted small','Wpisz kod otrzymany po utworzeniu profilu, nie imię ani ksywkę. Kod znajdziesz w swoim profilu na zalogowanym urządzeniu. Jeśli go nie masz, administrator może odszukać profil po ksywce.');
-    hint.id='playerCodeHint';codeInput.setAttribute('aria-describedby',hint.id);f.append(hint);
-    const pin=input(f,'PIN — sześć cyfr','pin','password');pin.inputMode='numeric';pin.maxLength=6;pin.autocomplete='current-password';
-    input(f,'Zapamiętaj urządzenie (HTTPS)','remember','checkbox');
-    const login=el('button','btn btn-primary','Zaloguj');login.type='submit';f.append(login);f.addEventListener('submit',async e=>{e.preventDefault();login.disabled=true;try{await api('profile.login',{code:f.elements.code.value,pin:pin.value,remember:f.elements.remember.checked});await refresh();profileScreen();}catch(e){alertBanner(e.message);}finally{login.disabled=false;}});root.append(f);
-    root.append(actionButton('Mam jednorazowy kod parowania',async()=>{const code=prompt('Kod z zalogowanego urządzenia');if(!code)return;await api('profile.pair-use',{code});await refresh();profileScreen();}));
-    root.append(actionButton('Utwórz profil',()=>profileScreen('register')));
+    if(state.profile){const root=screen('Ustawienia profilu');profileForm(root,state.profile);root.append(actionButton('Unieważnij wszystkie sesje',async()=>{if(!confirm('Wylogować wszystkie urządzenia?'))return;await api('profile.revoke',{});await refresh();profileScreen('login');}));return;}
+    if(kind==='register'){const root=screen('Utwórz profil');profileForm(root);root.append(actionButton('Mam już profil — zaloguj się',()=>profileScreen('login')));return;}
+    if(rememberedPlayers.length)playerChooser();else loginScreen();
   }
   async function startAttempt(id,mode){
     if(!state.profile&&!state.guest){guestComparison();return;}
@@ -512,7 +529,7 @@
     if(switching||!currentTest)return;if(testBusy){if(action==='pause')pendingPause=true;return;}testBusy=true;const attemptId=currentTest.id;
     try{const d=await api(`${currentTest.guest?'guest':'attempt'}.${action}`,{attempt_id:currentTest.id,revision:currentTest.revision,...(answers?{answers}:{})});if(currentTest?.id!==attemptId)return;currentTest=d.attempt;if(action==='pause')pendingPause=false;state.timerReceipt=Date.now();
       if(testVisible&&(action!=='heartbeat' || currentTest.status!=='active'))testScreen(currentTest);}
-    catch(e){if(action==='pause')pendingPause=true;alertBanner(e.message+(currentTest?.guest?' Wybierz „Wróć do bieżącego testu” lub rozpocznij nowy.':' W razie konfliktu wybierz „Wznów naukę lub test”.'));}
+    catch(e){if(action==='pause')pendingPause=true;alertBanner(e.message+(currentTest?.guest?' Wybierz „Wznów” w Quizach lub rozpocznij nowy.':' W razie konfliktu wybierz „Wznów” w Quizach.'));}
     finally{testBusy=false;if(pendingPause&&action!=='pause'&&currentTest?.status==='active')queueMicrotask(()=>testCommand('pause'));}
   }
   function testScreen(s){
@@ -548,7 +565,7 @@
   setInterval(()=>{const timer=$('testTimer');if(timer&&testVisible&&currentTest?.status==='active')timer.textContent=`Czas aktywny: ${duration(currentTest.active_seconds+Math.floor((Date.now()-state.timerReceipt)/1000))}${currentTest.guest?' · Gość':currentTest.paused?' · poza rankingiem':''}`;},1000);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&testVisible&&currentTest?.status==='active')testCommand('pause');});
   window.addEventListener('offline',()=>{if(currentTest?.status==='active')alertBanner(currentTest.guest?'Brak połączenia. Po powrocie internetu możesz wrócić do bieżącego testu.':'Brak połączenia. Wznowienie testu wyłączy kwalifikację do rankingu.');});
-  async function ranking(id){if(!state.profile){const root=screen('Leaderboard');root.append(el('p','','Ranking jest dostępny dla zalogowanych profili. Jako Gość możesz dalej korzystać z Nauki i Testu.'),actionButton('Zaloguj się',()=>profileScreen('login')),actionButton('Biblioteka',()=>show('libraryView')));return;}const d=await api('leaderboard',{id});const root=screen('Leaderboard — aktualna wersja');d.ranking.forEach((r,i)=>root.append(el('p','',`${i+1}. ${r.avatar} ${r.nickname}: ${r.score}/${r.total} · ${duration(r.active_seconds)}`)));if(!d.ranking.length)root.append(el('p','','Brak wyników ze zgodą na udział.'));}
+  async function ranking(id){if(!state.profile){const root=screen('Leaderboard');root.append(el('p','','Ranking jest dostępny dla zalogowanych profili. Jako Gość możesz dalej korzystać z Nauki i Testu.'),actionButton('Zaloguj się',()=>profileScreen('login')),actionButton('Quizy',()=>show('libraryView')));return;}const d=await api('leaderboard',{id});const root=screen('Leaderboard — aktualna wersja');d.ranking.forEach((r,i)=>root.append(el('p','',`${i+1}. ${r.avatar} ${r.nickname}: ${r.score}/${r.total} · ${duration(r.active_seconds)}`)));if(!d.ranking.length)root.append(el('p','','Brak wyników ze zgodą na udział.'));}
   const statusNames={new:'Nowe',learning:'W trakcie nauki',mastered:'Opanowane',review:'Do powtórki'};
   async function dashboard(id=null){
     const d=await api(id?'admin.stats':'stats',id?{id}:{});const root=screen(id?'Postępy gracza':'Moje postępy i testy');
@@ -578,9 +595,13 @@
   }
   async function adminScreen(search='',offset=0,sort='activity'){
     const d=await api('admin.list',{search,offset,sort});const root=screen('Gracze — administrator');
-    const f=el('form'),i=input(f,'Ksywka lub kod','search','text',search),b=el('button','btn','Szukaj');b.type='submit';f.append(b);f.addEventListener('submit',e=>{e.preventDefault();adminScreen(i.value).catch(e=>alertBanner(e.message));});root.append(f,actionButton('Sortuj po ksywce',()=>adminScreen(search,0,'name')));
-    for(const p of d.profiles){const card=el('article','quiz-card');card.append(el('h3','',`${p.avatar} ${p.nickname} · ${p.code}`),el('p','',`Testy: ${p.tests} · opanowane: ${p.mastered} · średnio: ${Math.round(p.average||0)}% · ranking: ${p.consent?'tak':'nie'}`),el('p','',`Utworzono: ${new Date(p.created_at*1000).toLocaleDateString('pl')} · aktywność: ${new Date(p.last_active*1000).toLocaleString('pl')}`));
-      card.append(actionButton('Postępy',()=>dashboard(p.id)),actionButton('Reset PIN',async()=>{const pin=prompt('Nowy sześciocyfrowy PIN');if(pin)await api('admin.pin',{id:p.id,pin});}),actionButton('Unieważnij sesje',()=>api('admin.revoke',{id:p.id})),actionButton('Edytuj profil',()=>{const target=screen('Edycja profilu');const form=profileForm(target,p);form.replaceWith(form.cloneNode(true));const fresh=target.querySelector('form');fresh.addEventListener('submit',async e=>{e.preventDefault();try{await api('admin.update',{id:p.id,nickname:fresh.elements.nickname.value,avatar:fresh.elements.avatar.value,consent:fresh.elements.consent.checked});await adminScreen();}catch(e){alertBanner(e.message);}});}),actionButton('Usuń profil',async()=>{if(confirm(`Usunąć profil ${p.nickname} i całą jego historię?`)){await api('admin.delete',{id:p.id,confirm:true});await adminScreen(search,offset,sort);}}));root.append(card);
+    root.append(actionButton('Wyloguj administratora',async()=>{const r=await api('logout',{});state.csrf=r.csrf;await refresh();show('libraryView');}));
+    const f=el('form'),i=input(f,'Ksywka lub imię wyświetlane','search','text',search),b=el('button','btn','Szukaj');b.type='submit';f.append(b);f.addEventListener('submit',e=>{e.preventDefault();adminScreen(i.value).catch(e=>alertBanner(e.message));});root.append(f,actionButton('Sortuj po ksywce',()=>adminScreen(search,0,'name')));
+    for(const p of d.profiles){const card=el('article','quiz-card');card.append(el('h3','',`${p.avatar} ${p.display_name} · ${p.nickname}`),el('p','',`Testy: ${p.tests} · opanowane: ${p.mastered} · średnio: ${Math.round(p.average||0)}% · ranking: ${p.consent?'tak':'nie'}`));
+      card.append(actionButton('Postępy i testy',()=>dashboard(p.id)),actionButton('Odzyskaj dostęp',async()=>{
+        if(!confirm('Potwierdzono tożsamość gracza? Jego sesje zostaną unieważnione.'))return;
+        const r=await api('admin.recovery',{id:p.id});await refresh();const target=screen('Jednorazowe ustawienie hasła');target.append(el('p','','Przekaż graczowi bezpiecznie. Sekret jest ważny 10 minut i działa tylko raz.'),el('p','recovery-secret',r.secret),actionButton('Gotowe — ukryj sekret',()=>adminScreen()));
+      }),actionButton('Unieważnij sesje',async()=>{await api('admin.revoke',{id:p.id});await refresh();await adminScreen();}),actionButton('Edytuj profil',()=>profileForm(screen('Edycja profilu'),p,true)),actionButton('Usuń profil',async()=>{if(confirm(`Usunąć profil ${p.display_name} i całą jego historię?`)){await api('admin.delete',{id:p.id,confirm:true});await refresh();await adminScreen(search,offset,sort);}}));root.append(card);
     }
     if(offset)root.append(actionButton('Poprzednia strona',()=>adminScreen(search,offset-50,sort)));
     if(d.profiles.length===50)root.append(actionButton('Następna strona',()=>adminScreen(search,offset+50,sort)));
@@ -616,5 +637,5 @@
   $('deleteQuiz').addEventListener('click', deleteEditor);
   for (const id of ['cancelEdit', 'cancelEditTop']) $(id).addEventListener('click', () => show('libraryView'));
 
-  refresh().then(()=>{if(state.profile||state.guest)show('libraryView');else welcomeScreen();}).catch((error) => { alertBanner(`Nie udało się pobrać quizów: ${error.message}`); });
+  refresh().then(()=>{if(state.profile||state.guest)show('libraryView');else if(rememberedPlayers.length)playerChooser();else welcomeScreen();}).catch((error) => { alertBanner(`Nie udało się pobrać quizów: ${error.message}`); });
 })();

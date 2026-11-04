@@ -14,56 +14,22 @@ function profileApi(string $action,array $b): array {
                     $s=tick($s,time());$s['paused']=1;$s['status']='paused';$s['revision']++;persistAttempt($s);
                 }
             }
-            if(is_string($_COOKIE['mathmatch_device']??null))query("DELETE FROM profile_tokens WHERE hash=? AND kind='device'",[hash('sha256',$_COOKIE['mathmatch_device'])]);
+            if(is_string($_COOKIE['mathmatch_account_device']??null))query("DELETE FROM profile_tokens WHERE hash=? AND kind='device'",[hash('sha256',$_COOKIE['mathmatch_account_device'])]);
         });
-        unset($_SESSION['profile_id'],$_SESSION['profile_version'],$_SESSION['profile_expires']);
+        unset($_SESSION['profile_id'],$_SESSION['profile_version'],$_SESSION['profile_expires'],$_SESSION['profile_installation']);
         tokenCookie('',time()-3600);return [];
     }
-    if(in_array($action,['profile.register','profile.login','profile.pair-use'],true)) {
-        if((empty($_SERVER['HTTPS'])||$_SERVER['HTTPS']==='off')&&!in_array($_SERVER['REMOTE_ADDR']??'', ['127.0.0.1','::1'],true))invalid('Logowanie wymaga HTTPS.');
-        if(!rateAllowed('profile-auth',20,900))invalid('Za dużo prób. Spróbuj za 15 minut.');
-        if(($b['remember']??false) && (empty($_SERVER['HTTPS'])||$_SERVER['HTTPS']==='off'))invalid('Zapamiętanie wymaga HTTPS.');
-        if($action==='profile.register') {
-            if(!rateAllowed('profile-register',5,3600))invalid('Limit tworzenia profili.');
-            $name=textField($b,'nickname',1,40);$avatar=avatarField($b);$pin=pinField($b);$consent=boolField($b,'consent');
-            if(($b['pin_repeat']??null)!==$pin)invalid('PIN-y muszą być identyczne.');
-            $code=strtoupper(bin2hex(random_bytes(6)));
-            query('INSERT INTO profiles(code,nickname,avatar,pin_hash,consent,created_at,last_active) VALUES(?,?,?,?,?,?,?)',[$code,$name,$avatar,password_hash($pin,PASSWORD_DEFAULT),$consent,time(),time()]);
-            $p=query('SELECT * FROM profiles WHERE code=?',[$code])->fetch();
-        } elseif($action==='profile.login') {
-            $rawCode=$b['code']??null;
-            if(!is_string($rawCode)||!preg_match('/^[A-Fa-f0-9]{12}$/D',trim($rawCode))) {
-                invalid('Wpisz 12-znakowy kod gracza otrzymany przy tworzeniu profilu, a nie imię lub ksywkę. Jeśli go nie masz, poproś administratora o odnalezienie profilu.');
-            }
-            $code=strtoupper(trim($rawCode));$pin=pinField($b);throttle('code:'.$code,8,900);
-            $p=query('SELECT * FROM profiles WHERE code=?',[$code])->fetch();
-            // Koszt weryfikacji także dla nieistniejącego kodu.
-            $hash=$p['pin_hash']??'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
-            if(!password_verify($pin,$hash)||!$p)invalid('Niepoprawny kod lub PIN.');
-        } else {
-            $code=strtoupper(textField($b,'code',20,20));
-            $p=atomic(function()use($code){
-                $t=query("SELECT * FROM profile_tokens WHERE hash=? AND kind='pair' AND expires>?",[hash('sha256',$code),time()])->fetch();
-                if(!$t)invalid('Kod wygasł lub został użyty.');
-                query('DELETE FROM profile_tokens WHERE hash=?',[$t['hash']]);
-                return query('SELECT * FROM profiles WHERE id=?',[$t['profile_id']])->fetch();
-            });
-        }
-        if(isset($_COOKIE['mathmatch_device']))query('DELETE FROM profile_tokens WHERE hash=?',[hash('sha256',$_COOKIE['mathmatch_device'])]);
-        tokenCookie('',time()-3600);signIn($p);
-        if(($b['remember']??false)===true)rememberProfile($p['id']);
-        return ['profile'=>publicProfile($p)];
-    }
+    if(in_array($action,['profile.register','profile.login','profile.recover'],true)) return accountAuthentication($action,$b);
     if(str_starts_with($action,'admin.')) {
         if(!isAdmin())invalid('Wymagana autoryzacja administratora.');
         if($action==='admin.list') {
             $search=textField(['search'=>$b['search']??''],'search',0,40);$offset=max(0,min(100000,(int)($b['offset']??0)));
             $sort=($b['sort']??'activity')==='name'?'p.nickname,p.id':'p.last_active DESC,p.id';
-            return ['profiles'=>query("SELECT p.id,p.code,p.nickname,p.avatar,p.consent,p.created_at,p.last_active,
+            return ['profiles'=>query("SELECT p.id,p.nickname,p.display_name,p.avatar,p.consent,p.created_at,p.last_active,
                 (SELECT COUNT(*) FROM sessions s WHERE s.profile_id=p.id AND s.mode='test' AND s.status='finished') tests,
                 (SELECT COUNT(*) FROM progress g WHERE g.profile_id=p.id AND g.status='mastered') mastered,
                 (SELECT AVG(100.0*s.score/json_array_length(v.pairs_json)) FROM sessions s JOIN quiz_versions v ON v.id=s.version_id WHERE s.profile_id=p.id AND s.mode='test' AND s.status='finished') average
-                FROM profiles p WHERE p.nickname LIKE ? OR p.code LIKE ? ORDER BY $sort LIMIT 50 OFFSET ?",['%'.$search.'%','%'.$search.'%',$offset])->fetchAll()];
+                FROM profiles p WHERE p.nickname LIKE ? OR p.display_name LIKE ? ORDER BY $sort LIMIT 50 OFFSET ?",['%'.$search.'%','%'.$search.'%',$offset])->fetchAll()];
         }
         $id=recordId($b);
         if($action==='admin.stats')return stats($id);
@@ -71,8 +37,12 @@ function profileApi(string $action,array $b): array {
             if(!query('SELECT 1 FROM profiles WHERE id=?',[$id])->fetch())invalid('Brak profilu.');
             if($action==='admin.delete') {if(($b['confirm']??false)!==true)invalid('Potwierdź usunięcie.');query('DELETE FROM profiles WHERE id=?',[$id]);}
             elseif($action==='admin.revoke')revokeProfile($id);
-            elseif($action==='admin.pin'){query('UPDATE profiles SET pin_hash=? WHERE id=?',[password_hash(pinField($b),PASSWORD_DEFAULT),$id]);revokeProfile($id);}
-            elseif($action==='admin.update')query('UPDATE profiles SET nickname=?,avatar=?,consent=? WHERE id=?',[textField($b,'nickname',1,40),avatarField($b),boolField($b,'consent'),$id]);
+            elseif($action==='admin.recovery') {
+                authTransport(); revokeProfile($id);$raw=bin2hex(random_bytes(32));
+                query('INSERT INTO profile_tokens VALUES(?,?,?,?)',[hash('sha256',$raw),$id,time()+600,'recovery']);
+                return ['secret'=>$raw,'expires_in'=>600];
+            }
+            elseif($action==='admin.update')saveAccount($b,$id);
             else invalid('Nieznana operacja.');
             return [];
         });
@@ -81,18 +51,29 @@ function profileApi(string $action,array $b): array {
     if(isset($b['expected_profile_id']) && $b['expected_profile_id']!==$pid)invalid('Gracz zmienił się w innej karcie. Odśwież stronę.');
     if($p['last_active']<time()-60)query('UPDATE profiles SET last_active=? WHERE id=?',[time(),$pid]);
     if($action==='profile.preferences') {query('UPDATE profiles SET sound=? WHERE id=?',[boolField($b,'sound'),$pid]);return [];}
-    if($action==='profile.update') {query('UPDATE profiles SET nickname=?,avatar=?,consent=? WHERE id=?',[textField($b,'nickname',1,40),avatarField($b),boolField($b,'consent'),$pid]);return [];}
-    if($action==='profile.revoke') {atomic(fn()=>revokeProfile($pid));unset($_SESSION['profile_id'],$_SESSION['profile_version']);tokenCookie('',time()-3600);return [];}
-    if($action==='profile.pair') {
-        if(!rateAllowed('pair',5,600))invalid('Limit kodów parowania.');
-        $raw=strtoupper(bin2hex(random_bytes(10)));
-        query('DELETE FROM profile_tokens WHERE expires<=?',[time()]);
-        query('INSERT INTO profile_tokens VALUES(?,?,?,?)',[hash('sha256',$raw),$pid,time()+600,'pair']);return ['code'=>$raw];
+    if($action==='profile.update') {
+        throttle('settings:'.$pid,8,900);
+        return atomic(function()use($b,$pid){
+            $p=requireProfile();if($p['id']!==$pid)invalid('Sesja wygasła.');
+            $new=$b['password']??'';
+            if(loginName($b['nickname']??null)!==$p['nickname'] || $new!=='') {
+                if(!is_string($b['current_password']??null)||!verifyAccountPassword($b['current_password'],$p['password_hash']))invalid('Sprawdź aktualne hasło.');
+            }
+            saveAccount($b,$pid);
+            if(isset($b['sound']))query('UPDATE profiles SET sound=? WHERE id=?',[boolField($b,'sound'),$pid]);
+            if($new!=='') {
+                $new=accountPassword($b);if(($b['password_repeat']??null)!==$new)invalid('Hasła muszą być identyczne.');
+                query('UPDATE profiles SET password_hash=? WHERE id=?',[hashAccountPassword($new),$pid]);revokeProfile($pid);
+                signIn(query('SELECT * FROM profiles WHERE id=?',[$pid])->fetch());
+            }
+            return [];
+        });
     }
+    if($action==='profile.revoke') {atomic(fn()=>revokeProfile($pid));unset($_SESSION['profile_id'],$_SESSION['profile_version']);tokenCookie('',time()-3600);return [];}
     if($action==='stats')return stats($pid);
     if($action==='leaderboard') {
         $id=recordId($b);
-        return ['ranking'=>query("WITH ranked AS (SELECT p.nickname,p.avatar,s.score,s.active_seconds,s.finished,s.id,
+        return ['ranking'=>query("WITH ranked AS (SELECT p.display_name AS nickname,p.avatar,s.score,s.active_seconds,s.finished,s.id,
             json_array_length(v.pairs_json) total,ROW_NUMBER() OVER(PARTITION BY p.id ORDER BY s.score DESC,s.active_seconds,s.finished,s.id) choice
             FROM sessions s JOIN profiles p ON p.id=s.profile_id JOIN quiz_versions v ON v.id=s.version_id JOIN quizzes q ON q.id=v.quiz_id
             WHERE q.id=? AND q.archived_at IS NULL AND v.version=(SELECT MAX(version) FROM quiz_versions WHERE quiz_id=q.id)

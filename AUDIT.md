@@ -1,3 +1,5 @@
+> Dokument historyczny sprzed przebudowy kont. Nie opisuje bieżącego schematu ani procedury instalacji; aktualne instrukcje znajdują się w README i docs/WDROZENIE.md.
+
 # Audyt Math Match — 4 listopada 2026
 
 ## Zakres i wynik

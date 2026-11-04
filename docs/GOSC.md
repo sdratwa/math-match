@@ -11,7 +11,7 @@ podczas zmiany quizu, restartu Nauki ani kolejnego Testu.
 Gość ma pełną lokalną Naukę oraz Test z serwerową oceną, czasem, zmianą połączeń,
 pauzą, wznowieniem i podsumowaniem. Nawigacja pokazuje „Gość” i informację o braku
 zapisu wyników. Nie pokazuje prywatnych statystyk, historii ani opanowania.
-„Wróć do bieżącego testu” pozwala kontynuować próbę po wyjściu do biblioteki lub
+„Wznów” w Quizach pozwala kontynuować próbę po wyjściu do Quizów lub
 formularza w tej samej otwartej stronie. Odświeżenie/zamknięcie strony nie daje
 gwarancji wznowienia. Zalogowany profil zachowuje dotychczasowy sposób działania.
 
@@ -75,7 +75,7 @@ umożliwia wznowienie, o ile sesja PHP i tymczasowa próba nadal istnieją.
 
 `python3 tests/run.py` obejmuje dotychczasowe regresje oraz:
 
-- wejście bez profilu, bibliotekę, wymagane potwierdzenie i CSRF;
+- wejście bez profilu, Quizy, wymagane potwierdzenie i CSRF;
 - utworzenie testu, retry, rozłączenie, ponowne przypisanie, pauzę i wznowienie;
 - odrzucenie niepełnych, powielonych i nieznanych przypisań;
 - serwerowy wynik i czas, ignorowanie podrobionego wyniku i `profile_id`;
@@ -96,7 +96,7 @@ Na osobnym środowisku z syntetycznymi quizami wykonaj na iPhone Safari,
 iPad Safari oraz macOS Chrome:
 
 1. Otwórz nową sesję bez profilu. Sprawdź trzy opcje startowe. „Graj jako Gość”
-   pokazuje porównanie, a nie bibliotekę. Wróć na start. Sprawdź osobno przyciski
+   pokazuje porównanie, a nie Quizy. Wróć na start. Sprawdź osobno przyciski
    rejestracji i logowania z obu ekranów oraz możliwość powrotu.
 2. Przeczytaj wszystkie 10 wierszy. Sprawdź pion/poziom, mały ekran i powiększony
    tekst: bez poziomego przewijania strony, czytelna zgoda opiekuna przy rankingu,
@@ -111,7 +111,7 @@ iPad Safari oraz macOS Chrome:
    odpowiedzi są widoczne po zatwierdzeniu. Można ponowić test bez rejestracji.
 6. Pauzuj i odczekaj minutę. Wznów: czas pauzy nie nalicza się. Przełącz aplikację,
    zablokuj ekran, wróć do otwartej strony. Sprawdź również brak sieci >45 s
-   i „Wróć do bieżącego testu” po przywróceniu połączenia.
+   i „Wznów” w Quizach po przywróceniu połączenia.
 7. Otwórz formularz profilu w trakcie testu i wróć bez logowania: można kontynuować
    bieżący test. Następnie zaloguj się lub utwórz profil: prywatna historia nie
    zawiera prób Gościa. Wyloguj się i ponownie wybierz Gościa — brak danych profilu.
@@ -123,15 +123,9 @@ iPad Safari oraz macOS Chrome:
 10. Klawiatura i VoiceOver: kolejność Tab, widoczny fokus, nagłówki tabeli, odczyt
     przycisków i komunikatów; żaden etap nie wymaga przeciągania ani samego koloru.
 
-## Pliki i wdrożenie
+## Wdrożenie
 
-Zmiany: `public/index.php`, `public/assets/app.js`, `public/assets/app.css`,
-`src/domain.php`, `src/profile-api.php`, `tests/run.py`, `README.md`, `AGENTS.md`.
-Nowe pliki: `src/guest-api.php`, `tests/guest.php`, `docs/GOSC.md`.
-
-Nie ma nowej migracji; pozostaje schemat 1. Wdrożenie wymaga osobnej decyzji.
-Przed nim zachowaj poprzednie wydanie i spójny backup SQLite według
-`ROZBUDOWA.md`. Wgraj razem pliki PHP i assety (oznaczone `v=3`), zachowując
-katalog danych i konfigurację. Rollback tej zmiany: przywróć poprzedni kompletny
-kod; baza nie wymaga cofania schematu ani utraty nowych postępów profili.
-Nie cofaj kodu do wersji sprzed migracji profili bez odpowiedniej kopii bazy.
+Bieżące wydanie wymaga czystej instalacji schematu 2, opisanej w
+[WDROZENIE.md](WDROZENIE.md). Gość nie wymaga dodatkowych tabel.
+Kod PHP i assety aktualizuj razem. Backup i wycofanie całego wydania są
+opisane w instrukcji wdrożenia.

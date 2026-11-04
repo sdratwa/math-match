@@ -29,7 +29,7 @@ class ApiTests(unittest.TestCase):
         (folder / 'sessions').mkdir()
         self.env = dict(os.environ, MATH_MATCH_STORAGE=str(folder / 'data'),
                         MATH_MATCH_ALLOW_PUBLIC_CREATION='0')
-        subprocess.run([PHP, str(ROOT / 'bin/migrate.php')], env=self.env, check=True, capture_output=True)
+        subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=self.env, check=True, capture_output=True)
         self.password = secrets.token_urlsafe(24)
         self.set_password(self.password)
         with socket.socket() as sock:
@@ -132,40 +132,35 @@ class ApiTests(unittest.TestCase):
         first, second = self.client(), self.client()
         a = self.request(first, 'bootstrap')[1]['csrf']
         b = self.request(second, 'bootstrap')[1]['csrf']
-        data = dict(nickname='Synthetic', avatar='🦊', pin='123456', pin_repeat='123456', consent=False)
+        data = dict(nickname='Synthetic', avatar='🦊', password='zielony las pachnie', password_repeat='zielony las pachnie', consent=False)
         self.assertEqual(self.request(first, 'profile.register', data)[0], 403)
         status, profile = self.request(first, 'profile.register', data, a)
         self.assertEqual(status, 200)
-        self.assertNotIn('pin_hash', profile['profile'])
+        self.assertNotIn('password_hash', profile['profile'])
         self.assertEqual(self.request(second, 'stats', {}, b)[0], 422)
         self.assertEqual(self.request(first, 'admin.list', {}, a)[0], 422)
         self.assertEqual(self.request(first, 'stats', {'id': 999999}, a)[0], 200)
         self.assertEqual(self.request(first, 'profile.logout', {}, a)[0], 200)
         self.assertIsNone(self.request(first, 'bootstrap')[1]['profile'])
-        code = profile['profile']['code']
-        self.assertEqual(self.request(second, 'profile.login', dict(code=code, pin='123456'), b)[0], 200)
-        self.assertEqual(self.request(second, 'bootstrap')[1]['profile']['code'], code)
+        code = profile['profile']['nickname']
+        self.assertEqual(self.request(second, 'profile.login', dict(nickname=code, password='zielony las pachnie'), b)[0], 200)
+        self.assertEqual(self.request(second, 'bootstrap')[1]['profile']['nickname'], code)
 
-    def test_login_explains_player_code_and_preserves_authentication(self):
+    def test_login_neutral_errors_and_unicode(self):
         client = self.client()
         token = self.request(client, 'bootstrap')[1]['csrf']
-        status, registered = self.request(client, 'profile.register', dict(
-            nickname='Małgosia', avatar='🦊', pin='123456', pin_repeat='123456', consent=False), token)
+        data = dict(nickname='Małgosia', avatar='🦊', password='zielony las pachnie', password_repeat='zielony las pachnie', consent=False)
+        status, registered = self.request(client, 'profile.register', data, token)
         self.assertEqual(status, 200)
-        code = registered['profile']['code']
         self.request(client, 'profile.logout', {}, token)
-        for bad in ['Małgosia', 'abcdefghijkl', '', None, 123456789012, ['name']]:
-            status, result = self.request(client, 'profile.login', dict(code=bad, pin='123456'), token)
+        errors = []
+        for bad, pwd in [('Małgosia','złe hasło'),('nieznany','zielony las pachnie'),('', 'x'),(None, 'x'),(['name'],'x')]:
+            status, result = self.request(client, 'profile.login', dict(nickname=bad, password=pwd), token)
             self.assertEqual(status, 422)
-            self.assertIn('12-znakowy kod gracza', result['error'])
-            self.assertNotIn('Niepoprawne pole: code', result['error'])
+            errors.append(result['error'])
             self.assertIsNone(self.request(client, 'bootstrap')[1]['profile'])
-        unknown = '0' * 12 if code != '0' * 12 else '1' * 12
-        wrong_pin = self.request(client, 'profile.login', dict(code=code, pin='654321'), token)
-        wrong_code = self.request(client, 'profile.login', dict(code=unknown, pin='123456'), token)
-        self.assertEqual(wrong_pin, wrong_code)
-        self.assertEqual(wrong_pin[1]['error'], 'Niepoprawny kod lub PIN.')
-        status, result = self.request(client, 'profile.login', dict(code='  '+code.lower()+'  ', pin='123456'), token)
+        self.assertEqual(len(set(errors)), 1)
+        status, result = self.request(client, 'profile.login', dict(nickname='  MAŁGOSIA  ', password='zielony las pachnie'), token)
         self.assertEqual(status, 200)
         self.assertEqual(result['profile']['id'], registered['profile']['id'])
 
@@ -178,12 +173,12 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(actual, status, data)
             return data
         def register(client, token, pin):
-            return call('profile.register', dict(nickname='Ta sama ksywka', avatar='🐼',
-                pin=pin, pin_repeat=pin, consent=True), client=client, token=token)['profile']
-        a = register(shared, csrf, '123456')
-        b = register(other, other_csrf, '654321')
-        self.assertNotEqual(a['code'], b['code'])
-        call('profile.login', dict(code=a['code'], pin='123456'), client=other, token=other_csrf)
+            return call('profile.register', dict(nickname='Gracz '+pin, avatar='🐼',
+                password=pin, password_repeat=pin, consent=True), client=client, token=token)['profile']
+        a = register(shared, csrf, 'zielony las pachnie')
+        b = register(other, other_csrf, 'drugi zielony las')
+        self.assertNotEqual(a['nickname'], b['nickname'])
+        call('profile.login', dict(nickname=a['nickname'], password='zielony las pachnie'), client=other, token=other_csrf)
         learn = call('attempt.start', dict(id=quiz_id, mode='learn', request_key=secrets.token_hex(16)))['attempt']
         pair = learn['pairs'][0]['id']
         call('attempt.answer', dict(attempt_id=learn['id'], term=pair, definition=pair, event_key=secrets.token_hex(16)))
@@ -196,7 +191,7 @@ class ApiTests(unittest.TestCase):
         raw, other_raw = secrets.token_hex(32), secrets.token_hex(32)
         hashes = [hashlib.sha256(x.encode()).hexdigest() for x in [raw, other_raw]]
         jar = next(h.cookiejar for h in shared.handlers if isinstance(h, urllib.request.HTTPCookieProcessor))
-        jar.set_cookie(http.cookiejar.Cookie(0, 'mathmatch_device', raw, None, False,
+        jar.set_cookie(http.cookiejar.Cookie(0, 'mathmatch_account_device', raw, None, False,
             '127.0.0.1', False, False, '/', True, False, None, True, None, None, {}))
         dbpath = Path(self.env['MATH_MATCH_STORAGE']) / 'math_match.sqlite'
         with closing(sqlite3.connect(dbpath)) as db:
@@ -219,13 +214,13 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(boot['admin'])
         call('stats', {}, 422)
         call('profile.login', dict(id=b['id']), 422)
-        call('profile.login', dict(code=b['code'], pin='000000'), 422)
+        call('profile.login', dict(nickname=b['nickname'], password='niepoprawne hasło'), 422)
         self.assertIsNone(self.request(shared, 'bootstrap')[1]['profile'])
         with closing(sqlite3.connect(dbpath)) as db:
             self.assertIsNone(db.execute('SELECT 1 FROM profile_tokens WHERE hash=?', [hashes[0]]).fetchone())
             self.assertIsNotNone(db.execute('SELECT 1 FROM profile_tokens WHERE hash=?', [hashes[1]]).fetchone())
         self.assertEqual(self.request(other, 'bootstrap')[1]['profile']['id'], a['id'])
-        call('profile.login', dict(code=b['code'], pin='654321'))
+        call('profile.login', dict(nickname=b['nickname'], password='drugi zielony las'))
         self.assertEqual(call('stats', dict(id=a['id']))['history'], [])
         call('stats', dict(expected_profile_id=a['id']), 422)
         call('attempt.get', dict(attempt_id=attempt['id']), 422)
@@ -237,7 +232,7 @@ class ApiTests(unittest.TestCase):
         call('attempt.answer', dict(attempt_id=b_learn['id'], term=bp, definition=bp, event_key=secrets.token_hex(16)))
         b_stats = call('stats', {})
         call('profile.logout', {})
-        call('profile.login', dict(code=a['code'], pin='123456'))
+        call('profile.login', dict(nickname=a['nickname'], password='zielony las pachnie'))
         after = call('stats', {})
         self.assertEqual(after['progress'], before['progress'])
         self.assertEqual(after['events'], before['events'])
@@ -252,7 +247,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(finished['score'], 2)
         self.assertEqual(call('leaderboard', dict(id=quiz_id))['ranking'], [])
         call('profile.logout', dict(attempt_id=resumed['id']))
-        call('profile.login', dict(code=b['code'], pin='654321'))
+        call('profile.login', dict(nickname=b['nickname'], password='drugi zielony las'))
         self.assertEqual(call('stats', {}), b_stats)
         self.assertTrue(self.request(shared, 'bootstrap')[1]['admin'])
 
@@ -281,7 +276,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(len(boot['quizzes']), 1)
         owner = self.client()
         owner_token = self.request(owner, 'bootstrap')[1]['csrf']
-        owner_profile = self.request(owner, 'profile.register', dict(nickname='Właściciel', avatar='🐱', pin='123456', pin_repeat='123456', consent=True), owner_token)[1]['profile']
+        owner_profile = self.request(owner, 'profile.register', dict(nickname='Właściciel', avatar='🐱', password='zielony las pachnie', password_repeat='zielony las pachnie', consent=True), owner_token)[1]['profile']
         initial = self.learning_data()
         payload = dict(id=quiz_id, request_key=secrets.token_hex(16))
         self.assertEqual(self.request(client, 'guest.start', payload, token)[0], 422)
@@ -325,7 +320,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request(owner, 'stats', {}, owner_token)[1]['history'], [])
         self.assertEqual(self.request(owner, 'leaderboard', dict(id=quiz_id), owner_token)[1]['ranking'], [])
         # Rejestracja nie importuje anonimowego wyniku.
-        status, result = self.request(client, 'profile.register', dict(nickname='Test',avatar='🦊',pin='123456',pin_repeat='123456',consent=True), token)
+        status, result = self.request(client, 'profile.register', dict(nickname='Test',avatar='🦊',password='zielony las pachnie',password_repeat='zielony las pachnie',consent=True), token)
         self.assertEqual(status, 200)
         self.assertFalse(self.request(client, 'bootstrap')[1]['guest'])
         self.assertEqual(self.request(client, 'stats', {}, token)[1]['history'], [])
@@ -354,8 +349,8 @@ class ApiTests(unittest.TestCase):
         # Zalogowanie do istniejącego profilu usuwa grę gościa, zachowując admina.
         profile_client = self.client()
         ptoken = self.request(profile_client, 'bootstrap')[1]['csrf']
-        p = self.request(profile_client, 'profile.register',dict(nickname='Inny',avatar='🐼',pin='654321',pin_repeat='654321',consent=False),ptoken)[1]['profile']
-        self.assertEqual(self.request(admin, 'profile.login',dict(code=p['code'],pin='654321'),token)[0],200)
+        p = self.request(profile_client, 'profile.register',dict(nickname='Inny',avatar='🐼',password='drugi zielony las',password_repeat='drugi zielony las',consent=False),ptoken)[1]['profile']
+        self.assertEqual(self.request(admin, 'profile.login',dict(nickname=p['nickname'],password='drugi zielony las'),token)[0],200)
         boot = self.request(admin,'bootstrap')[1]
         self.assertTrue(boot['admin'])
         self.assertFalse(boot['guest'])
@@ -367,25 +362,49 @@ class ApiTests(unittest.TestCase):
 
 
 class StorageTests(unittest.TestCase):
+    def test_accounts(self):
+        with tempfile.TemporaryDirectory(prefix='math-match-accounts-') as folder:
+            env = dict(os.environ, MATH_MATCH_STORAGE=folder)
+            subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=env, check=True, capture_output=True)
+            result = subprocess.run([PHP, str(ROOT / 'tests/accounts.php')], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
     def test_guest_domain(self):
         with tempfile.TemporaryDirectory(prefix='math-match-guest-') as folder:
             env = dict(os.environ, MATH_MATCH_STORAGE=folder)
-            subprocess.run([PHP, str(ROOT / 'bin/migrate.php')], env=env, check=True, capture_output=True)
+            subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=env, check=True, capture_output=True)
             result = subprocess.run([PHP, str(ROOT / 'tests/guest.php')], env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
 
     def test_features(self):
         with tempfile.TemporaryDirectory(prefix='math-match-features-') as folder:
+            subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=dict(os.environ, MATH_MATCH_STORAGE=folder), check=True, capture_output=True)
             result = subprocess.run([PHP, str(ROOT / 'tests/features.php')], env=dict(os.environ, MATH_MATCH_STORAGE=folder), capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
 
     def test_auth_functions(self):
         with tempfile.TemporaryDirectory(prefix='math-match-unit-') as folder:
-            subprocess.run([PHP, str(ROOT / 'bin/migrate.php')], env=dict(os.environ, MATH_MATCH_STORAGE=folder), check=True, capture_output=True)
+            subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=dict(os.environ, MATH_MATCH_STORAGE=folder), check=True, capture_output=True)
             result = subprocess.run([PHP, str(ROOT / 'tests/auth.php')],
                                     env=dict(os.environ, MATH_MATCH_STORAGE=folder),
                                     capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
+    def test_initialization_refuses_existing_database(self):
+        with tempfile.TemporaryDirectory(prefix='math-match-init-') as folder:
+            env = dict(os.environ, MATH_MATCH_STORAGE=folder)
+            command = [PHP, str(ROOT / 'bin/init.php')]
+            subprocess.run(command, env=env, check=True, capture_output=True)
+            path = Path(folder) / 'math_match.sqlite'
+            with sqlite3.connect(path) as db:
+                db.execute("INSERT INTO settings VALUES('sentinel','keep')")
+                db.commit()
+            self.assertNotEqual(subprocess.run(command, env=env, capture_output=True).returncode, 0)
+            with sqlite3.connect(path) as db:
+                self.assertEqual(db.execute("SELECT value FROM settings WHERE key='sentinel'").fetchone()[0], 'keep')
+                self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
+                self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
+                self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 2)
 
     def test_ignore_rules(self):
         for path in ['storage/.env', 'storage/math_match.sqlite', 'storage/nested/copy.zip',
@@ -405,19 +424,19 @@ class StorageTests(unittest.TestCase):
             clone = Path(folder) / 'clone'
             subprocess.run(['git', 'clone', '--quiet', '--no-hardlinks', str(ROOT), str(clone)], check=True)
             for relative in ['.gitignore', 'src/lib.php', 'public/index.php', 'bin/admin.php',
-                             'README.md', 'src/migrations.php', 'bin/migrate.php', 'storage/.gitkeep']:
+                             'README.md', 'src/schema.php', 'src/accounts.php', 'src/domain.php', 'src/profile-api.php', 'src/guest-api.php', 'bin/init.php', 'storage/.gitkeep']:
                 target = clone / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / relative, target)
             self.assertEqual(sorted(p.name for p in (clone / 'storage').iterdir()), ['.gitkeep'])
             env = dict(os.environ)
             env['MATH_MATCH_STORAGE'] = str(clone / 'storage')
-            subprocess.run([PHP, 'bin/migrate.php'], cwd=clone, env=env, check=True, capture_output=True)
+            subprocess.run([PHP, 'bin/init.php'], cwd=clone, env=env, check=True, capture_output=True)
             password = secrets.token_urlsafe(24)
             result = subprocess.run([PHP, 'bin/admin.php', 'set-password'], cwd=clone,
                                     input=password + '\n' + password + '\n', text=True,
                                     capture_output=True, env=env)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             read = subprocess.run([PHP, '-r', 'require "src/lib.php"; echo count(fetchQuizzes());'],
                                   cwd=clone, env=env, capture_output=True, text=True)
             self.assertEqual(read.returncode, 0, read.stderr)

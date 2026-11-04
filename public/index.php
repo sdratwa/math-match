@@ -24,6 +24,10 @@ session_set_cookie_params([
 ]);
 session_start();
 require dirname(__DIR__) . '/src/lib.php';
+require dirname(__DIR__) . '/src/domain.php';
+require dirname(__DIR__) . '/src/profile-api.php';
+require dirname(__DIR__) . '/src/guest-api.php';
+expireGuestTest(time());
 
 if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -72,11 +76,14 @@ $api = $_GET['api'] ?? null;
 if (is_string($api)) {
     try {
         if ($api === 'bootstrap') {
+            restoreProfile();
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
                 respond(['ok' => false, 'error' => 'Wymagana metoda GET.'], 405);
             }
             respond([
                 'ok' => true,
+                'profile' => profile() ? publicProfile(profile()) : null,
+                'guest' => !profile() && ($_SESSION['guest_mode'] ?? false) === true,
                 'quizzes' => fetchQuizzes(),
                 'admin' => isAdmin(),
                 'adminConfigured' => readSetting('admin_hash') !== null,
@@ -85,7 +92,12 @@ if (is_string($api)) {
             ]);
         }
         $body = requestBody();
+        if (str_starts_with($api, 'guest.')) respond(['ok'=>true] + guestApi($api,$body));
+        if (str_contains($api, '.') || in_array($api, ['stats','leaderboard'], true)) {
+            respond(['ok'=>true] + profileApi($api,$body));
+        }
         if ($api === 'login') {
+            if (!$isHttps && !in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1','::1'], true)) respond(['ok'=>false,'error'=>'Wymagane HTTPS.'],403);
             if (!rateAllowed('login', 8, 15 * 60)) {
                 respond(['ok' => false, 'error' => 'Za dużo prób logowania. Spróbuj za 15 minut.'], 429);
             }
@@ -96,11 +108,12 @@ if (is_string($api)) {
             }
             session_regenerate_id(true);
             $_SESSION['math_match_admin'] = true;
+            $_SESSION['math_match_admin_version'] = hash('sha256', $hash);
             $_SESSION['csrf'] = bin2hex(random_bytes(32));
             respond(['ok' => true, 'csrf' => $_SESSION['csrf']]);
         }
         if ($api === 'logout') {
-            unset($_SESSION['math_match_admin']);
+            unset($_SESSION['math_match_admin'], $_SESSION['math_match_admin_version']);
             session_regenerate_id(true);
             $_SESSION['csrf'] = bin2hex(random_bytes(32));
             respond(['ok' => true, 'csrf' => $_SESSION['csrf']]);
@@ -113,9 +126,7 @@ if (is_string($api)) {
             if (!isAdmin() && !rateAllowed('create', 10, 60 * 60)) {
                 respond(['ok' => false, 'error' => 'Limit 10 zestawów na godzinę. Spróbuj później.'], 429);
             }
-            $stmt = database()->prepare('INSERT INTO quizzes(title,pairs_json) VALUES(?,?)');
-            $stmt->execute([$quiz['title'], json_encode($quiz['pairs'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
-            respond(['ok' => true, 'id' => (int)database()->lastInsertId()]);
+            respond(['ok' => true, 'id' => saveQuiz($body)]);
         }
         if ($api === 'update' || $api === 'delete') {
             if (!isAdmin()) {
@@ -123,30 +134,20 @@ if (is_string($api)) {
             }
             $id = recordId($body);
             if ($api === 'delete') {
-                $stmt = database()->prepare('DELETE FROM quizzes WHERE id=?');
+                $stmt = database()->prepare("UPDATE quizzes SET archived_at=datetime('now') WHERE id=? AND archived_at IS NULL");
                 $stmt->execute([$id]);
                 if ($stmt->rowCount() === 0) {
                     respond(['ok' => false, 'error' => 'Ten zestaw już nie istnieje.'], 404);
                 }
                 respond(['ok' => true]);
             }
-            $quiz = validatedQuiz($body);
-            $stmt = database()->prepare('UPDATE quizzes SET title=?, pairs_json=?, updated_at=datetime(\'now\') WHERE id=?');
-            $stmt->execute([$quiz['title'], json_encode($quiz['pairs'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $id]);
-            if ($stmt->rowCount() === 0) {
-                $check = database()->prepare('SELECT 1 FROM quizzes WHERE id=?');
-                $check->execute([$id]);
-                if ($check->fetchColumn() === false) {
-                    respond(['ok' => false, 'error' => 'Ten zestaw już nie istnieje.'], 404);
-                }
-            }
-            respond(['ok' => true, 'id' => $id]);
+            respond(['ok' => true, 'id' => saveQuiz($body,$id)]);
         }
         respond(['ok' => false, 'error' => 'Nieznana operacja.'], 404);
     } catch (InvalidArgumentException $e) {
         respond(['ok' => false, 'error' => $e->getMessage()], 422);
     } catch (Throwable $e) {
-        error_log('[Math Match] ' . $e->getMessage());
+        error_log('[Math Match] Błąd obsługi żądania.');
         respond(['ok' => false, 'error' => 'Błąd serwera. Sprawdź konfigurację PHP i uprawnienia storage.'], 500);
     }
 }
@@ -159,8 +160,8 @@ if (is_string($api)) {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Math Match — dopasuj pojęcia</title>
-  <link rel="stylesheet" href="assets/app.css?v=1">
-  <script src="assets/app.js?v=1" defer></script>
+  <link rel="stylesheet" href="assets/app.css?v=3">
+  <script src="assets/app.js?v=3" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -176,7 +177,46 @@ if (is_string($api)) {
     </header>
     <div id="banner" class="banner" role="status" hidden></div>
 
-    <section id="libraryView" aria-labelledby="libraryHeading">
+    <section id="welcomeView" class="welcome-panel" aria-labelledby="welcomeHeading">
+      <p class="kicker">MAŁE KROKI, WIELKIE ODKRYCIA</p>
+      <h2 id="welcomeHeading" tabindex="-1">Gotowi na zabawę? 🧩</h2>
+      <p class="muted">Łącz pojęcia, ćwicz i sprawdzaj, ile już umiesz. Wybierz, jak chcesz grać.</p>
+      <div class="welcome-actions">
+        <button class="btn btn-primary" id="chooseGuest" type="button">🎮 Graj jako Gość</button>
+        <button class="btn" id="chooseLogin" type="button">Zaloguj się</button>
+        <button class="btn" id="chooseRegister" type="button">Utwórz profil</button>
+      </div>
+    </section>
+
+    <section id="guestComparisonView" class="welcome-panel" hidden aria-labelledby="guestHeading">
+      <h2 id="guestHeading" tabindex="-1">🎮 Jak chcesz grać?</h2>
+      <p class="muted">Możesz grać bez konta, ale z profilem masz więcej możliwości!</p>
+      <table class="guest-comparison">
+        <caption class="sr-only">Porównanie gry jako Gość i gry z profilem</caption>
+        <thead><tr><th scope="col">Możliwość</th><th scope="col">Gość</th><th scope="col">Z profilem</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Przeglądanie quizów</th><td>✅ <span class="sr-only">Tak</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Tryb Nauka</th><td>✅ <span class="sr-only">Tak</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Tryb Test</th><td>✅ <span class="sr-only">Tak</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Wynik i czas po teście</th><td>✅ <span class="sr-only">Tak</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Pauza i wznowienie w bieżącej grze</th><td>✅ <span class="sr-only">Tak</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Zapisywanie postępów</th><td>❌ <span class="sr-only">Nie</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Historia testów</th><td>❌ <span class="sr-only">Nie</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Śledzenie opanowanych pojęć</th><td>❌ <span class="sr-only">Nie</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+          <tr><th scope="row">Udział w leaderboardzie</th><td>❌ <span class="sr-only">Nie</span></td><td>✅ <span class="sr-only">Tak</span><small>za zgodą opiekuna</small></td></tr>
+          <tr><th scope="row">Kontynuowanie na innym urządzeniu</th><td>❌ <span class="sr-only">Nie</span></td><td>✅ <span class="sr-only">Tak</span></td></tr>
+        </tbody>
+      </table>
+      <div class="guest-actions">
+        <button class="btn btn-primary" id="guestRegister" type="button">Utwórz profil — zapisuj swoje postępy!</button>
+        <button class="btn" id="confirmGuest" type="button">Kontynuuj jako Gość</button>
+        <button class="btn btn-quiet" id="guestLogin" type="button">Mam już profil — zaloguj się</button>
+        <button class="btn btn-quiet" id="guestBack" type="button">← Ekran startowy</button>
+      </div>
+    </section>
+    <p id="guestNotice" class="muted guest-notice" hidden>🙂 Gość · Grasz jako Gość — Twoje wyniki nie są zapisywane</p>
+
+    <section id="libraryView" hidden aria-labelledby="libraryHeading">
       <div class="sectionhead"><div><p class="kicker">WYBIERZ SWOJE WYZWANIE</p><h2 id="libraryHeading">Biblioteka quizów</h2><p class="muted">Wybierz zestaw i znajdź wszystkie pasujące pary.</p></div><span class="pill" id="quizCount">0 zestawów</span></div>
       <div class="quiz-grid" id="quizGrid" aria-live="polite"></div>
       <div class="empty" id="emptyLibrary" hidden>Nie ma jeszcze żadnych zestawów. Stwórz pierwszy! 🎨</div>

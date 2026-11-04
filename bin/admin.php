@@ -30,13 +30,13 @@ function secretPrompt(string $prompt): string
     return $value;
 }
 try {
-    $password = secretPrompt('Nowe hasło admina (min. 12 znaków): ');
+    $password = secretPrompt('Nowe hasło admina (12–72 bajty): ');
     $repeat = secretPrompt('Powtórz hasło: ');
-    if (strlen($password) < 12 || strlen($password) > 200 || $password !== $repeat) {
-        throw new RuntimeException('Hasło musi mieć 12–200 znaków; oba wpisy muszą być identyczne.');
+    if (strlen($password) < 12 || strlen($password) > 72 || $password !== $repeat) {
+        throw new RuntimeException('Hasło musi mieć 12–72 bajty; oba wpisy muszą być identyczne.');
     }
     writeSetting('admin_hash', password_hash($password, PASSWORD_DEFAULT));
-    fwrite(STDOUT, "Hasło administratora zapisane w bazie danych.\n");
+    fwrite(STDOUT, "Hasło administratora zapisane. Wcześniejsze sesje administratora utraciły uprawnienia.\n");
 } catch (Throwable $e) {
     fwrite(STDERR, "Błąd: " . $e->getMessage() . "\n");
     exit(1);

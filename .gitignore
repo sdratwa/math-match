@@ -9,7 +9,15 @@
 *.sqlite
 *.sqlite3
 *.sqlite-*
+*.sqlite3-*
 *.db
+*.db-*
 
 /vendor/
 /node_modules/
+
+# Kopie i dane wykonania nie należą do repozytorium.
+/backups/
+*.backup
+*.bak
+*.log

@@ -30,49 +30,9 @@ function database(): PDO
     $pdo->exec('PRAGMA busy_timeout = 5000');
     $pdo->exec('PRAGMA journal_mode = WAL');
     $pdo->exec('PRAGMA foreign_keys = ON');
-    $pdo->exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
-    $pdo->exec('CREATE TABLE IF NOT EXISTS quizzes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        pairs_json TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime(\'now\')),
-        updated_at TEXT NOT NULL DEFAULT (datetime(\'now\'))
-    )');
-    $pdo->exec('CREATE TABLE IF NOT EXISTS rate_limits (
-        key TEXT PRIMARY KEY, started_at INTEGER NOT NULL, attempts INTEGER NOT NULL
-    )');
-
-    // Only seed once on a newly initialized database, not whenever all quizzes are deleted.
-    $pdo->exec('BEGIN IMMEDIATE');
-    try {
-        $wasSeeded = $pdo->query("SELECT value FROM settings WHERE key='seeded'")->fetchColumn();
-        if ($wasSeeded === false) {
-            $exampleSets = [
-                ['Number sequences', [
-                    ['term' => 'Linear sequence', 'description' => 'A number pattern which increases or decreases by the same amount each time. Example: 2, 6, 10, 14, ... (add 4).'],
-                    ['term' => 'Term', 'description' => 'Each individual number in a sequence. In 3, 6, 9, 12, the first term is 3.'],
-                    ['term' => 'Rule', 'description' => 'An instruction that tells us how to continue a number sequence.'],
-                    ['term' => 'Increasing sequence', 'description' => 'A sequence where each number is greater than the one before it.'],
-                    ['term' => 'Decreasing sequence', 'description' => 'A sequence where each number is less than the one before it.'],
-                ]],
-                ['Number types', [
-                    ['term' => 'Prime number', 'description' => 'A whole number greater than 1 that has exactly two positive factors: 1 and itself.'],
-                    ['term' => 'Composite number', 'description' => 'A whole number greater than 1 that has more than two positive factors.'],
-                    ['term' => 'Even number', 'description' => 'A whole number that can be divided by 2 with no remainder.'],
-                    ['term' => 'Odd number', 'description' => 'A whole number that is not divisible by 2.'],
-                    ['term' => 'Square number', 'description' => 'The result of multiplying a whole number by itself, such as 1, 4, 9, or 16.'],
-                ]],
-            ];
-            $stmt = $pdo->prepare('INSERT INTO quizzes (title, pairs_json) VALUES (?, ?)');
-            foreach ($exampleSets as [$title, $pairs]) {
-                $stmt->execute([$title, json_encode($pairs, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
-            }
-            $pdo->exec("INSERT INTO settings (key, value) VALUES ('seeded', '1')");
-        }
-        $pdo->commit();
-    } catch (Throwable $e) {
-        $pdo->rollBack();
-        throw $e;
+    if (!defined('MATH_MATCH_MIGRATING')) {
+        $version = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
+        if ($version !== 1) throw new RuntimeException('Wymagana migracja CLI.');
     }
     return $pdo;
 }
@@ -98,18 +58,31 @@ function publicCreationEnabled(): bool
 
 function isAdmin(): bool
 {
-    return isset($_SESSION['math_match_admin']) && $_SESSION['math_match_admin'] === true;
+    if (($_SESSION['math_match_admin'] ?? null) !== true) {
+        return false;
+    }
+    // Wersję uprawnień wyznacza dokładnie ten hash hasła, który zweryfikowano
+    // przy logowaniu. Zmiana hasła jest jednym atomowym zapisem w SQLite.
+    $version = $_SESSION['math_match_admin_version'] ?? null;
+    $hash = readSetting('admin_hash');
+    if (!is_string($version) || $hash === null ||
+        !hash_equals(hash('sha256', $hash), $version)) {
+        unset($_SESSION['math_match_admin'], $_SESSION['math_match_admin_version']);
+        return false;
+    }
+    return true;
 }
 
 function fetchQuizzes(): array
 {
-    $rows = database()->query('SELECT id, title, pairs_json, created_at, updated_at FROM quizzes ORDER BY id DESC')->fetchAll();
+    $rows = database()->query('SELECT id, title, pairs_json, created_at, updated_at, revision FROM quizzes WHERE archived_at IS NULL ORDER BY id DESC')->fetchAll();
     return array_map(static fn (array $row): array => [
         'id' => (int)$row['id'],
         'title' => $row['title'],
         'pairs' => json_decode($row['pairs_json'], true, 32, JSON_THROW_ON_ERROR),
         'createdAt' => $row['created_at'],
         'updatedAt' => $row['updated_at'],
+        'revision' => (int)$row['revision'],
     ], $rows);
 }
 

@@ -130,3 +130,35 @@ W raporcie rozdziel wyniki wykonanych testów, analizę statyczną i niewykonane
   w ramach zwykłego audytu. Używaj lokalnego środowiska z danymi syntetycznymi.
 - Zadanie analityczne nie upoważnia do napraw funkcjonalnych. Raportuj problemy
   i propozycje osobno; zmieniaj zachowanie aplikacji dopiero w ramach zleconej pracy.
+
+## Rozbudowa profili i postępów
+
+Zakres produktowy obejmuje profile bez e-maila, PIN, naukę, testy i dobrowolny
+ranking. Nie rozszerzaj zbierania danych poza ksywkę, avatar i postępy.
+
+- `src/migrations.php`, `bin/migrate.php`: jawna migracja CLI; zwykłe żądanie
+  nie tworzy schematu ani przykładów. Nowa instalacja zaczyna z pustą biblioteką.
+- `src/domain.php`: transakcje, wersje quizów, autoryzacja profilu i nauka.
+- `src/profile-api.php`: API profili, prób, statystyk i administracji.
+- `tests/features.php`: syntetyczna stara baza, migracja i logika domenowa.
+- `docs/ROZBUDOWA.md`: model danych, API, wdrożenie i testy ręczne.
+
+Niezmienne snapshoty w `quiz_versions` oceniają historyczne próby. Identyczne
+pary zachowują ID przy zmianie kolejności; zmiana treści tworzy nowe ID i nie
+przenosi opanowania. Quizy są archiwizowane. Aktualizacja wymaga `revision`.
+Każda pauza i wznowienie testu trwale wykluczają go z rankingu. Autoryzacja
+administratora nie zastępuje ani nie zmienia profilu dziecka.
+
+## Tryb Gościa
+
+- Wejście jako Gość wymaga ekranu porównawczego i świadomego potwierdzenia.
+  Nie powtarzaj ekranu podczas każdej gry; nie wymagaj rejestracji do Nauki/Testu.
+- `src/guest-api.php` przechowuje jedną tymczasową próbę w sesji PHP, bez zapisów
+  do tabel profili, historii i postępów. Nauka Gościa jest lokalna.
+- Ocena i czas są wspólne z profilem (`gradeTest`, `advanceTest`), ale trwały zapis
+  należy wyłącznie do ścieżki autoryzowanego profilu. Nie importuj prób Gościa.
+- Zachowaj odrębną autoryzację administratora i aktualną politykę odczytu rankingu
+  (tylko zalogowane profile). Potwierdzenie Gościa nie nadaje prywatnych uprawnień.
+- Nie dodawaj migracji dla stanu tymczasowego. Schemat pozostaje w wersji 1.
+- `docs/GOSC.md` zawiera kontrakt, retencję i ręczny odbiór interfejsu;
+  `tests/guest.php` oraz testy HTTP sprawdzają logikę bez przeglądarki.

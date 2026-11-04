@@ -52,11 +52,6 @@ function writeSetting(string $key, string $value): void
         ->execute([$key, $value]);
 }
 
-function publicCreationEnabled(): bool
-{
-    return !in_array(strtolower((string)getenv('MATH_MATCH_ALLOW_PUBLIC_CREATION')), ['0', 'false', 'no'], true);
-}
-
 function isAdmin(): bool
 {
     if (($_SESSION['math_match_admin'] ?? null) !== true) {

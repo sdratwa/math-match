@@ -118,8 +118,8 @@ iPad Safari oraz macOS Chrome:
 8. Ranking jako Gość wyjaśnia wymaganie logowania, ale nie blokuje dalszej gry.
    Zalogowany profil nadal widzi ranking zgodnie ze zgodami opiekunów.
 9. Administrator bez profilu dziecka może grać jako Gość i nadal zarządzać quizami.
-   Sam wybór Gościa nie wylogowuje administratora. Sprawdź publiczne tworzenie
-   quizów zgodnie z flagą oraz odmowę edycji/usuwania bez administratora.
+   Sam wybór Gościa nie wylogowuje administratora. Sprawdź tworzenie, edycję
+   i usuwanie quizów wyłącznie przez zalogowanego administratora.
 10. Klawiatura i VoiceOver: kolejność Tab, widoczny fokus, nagłówki tabeli, odczyt
     przycisków i komunikatów; żaden etap nie wymaga przeciągania ani samego koloru.
 

@@ -34,8 +34,8 @@ więc zmianę minimalnej wersji trzeba jawnie uzasadnić i udokumentować.
 
 - Zestawy są wspólne i trwale zapisywane w SQLite na serwerze. Pamięć przeglądarki
   nie może zastąpić serwerowego źródła danych.
-- Domyślnie każdy może wybierać i tworzyć zestawy. Respektuj opcję
-  `MATH_MATCH_ALLOW_PUBLIC_CREATION`; edycja i usuwanie wymagają administratora.
+- Każdy może wybierać zestawy. Tworzenie, edycja i usuwanie wymagają
+  zalogowanego administratora; sprawdzaj to w API i interfejsie.
 - Uprawnienia sprawdzaj na serwerze dla każdej operacji, niezależnie od interfejsu.
 - Poprawne pary znikają; błędne wywołują czerwony komunikat i dźwięk, jeśli jest
   włączony i przeglądarka na niego pozwala. Komunikat musi działać bez dźwięku.

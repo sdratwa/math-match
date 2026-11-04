@@ -56,8 +56,9 @@ w CLI i konfiguracji puli PHP-FPM. Do testów zawsze używaj osobnego katalogu.
 6. Admin otwiera osobny panel. Po potwierdzeniu tożsamości gracza może wydać
    jednorazowy sekret do ustawienia nowego hasła, ważny 10 minut.
 
-Domyślnie każdy może tworzyć quizy. `MATH_MATCH_ALLOW_PUBLIC_CREATION=0` ogranicza
-tworzenie do administratora. Edycja i archiwizacja zawsze wymagają admina.
+Tworzenie, edycja i archiwizacja quizów wymagają zalogowanego administratora.
+Przycisk „Nowy zestaw” pojawia się po zalogowaniu jako admin. Dawna zmienna
+`MATH_MATCH_ALLOW_PUBLIC_CREATION` nie jest już obsługiwana.
 Limity zestawów: tytuł 2–100, pojęcie 1–140, opis 2–700 znaków, 2–40 par,
 żądanie JSON do 100 000 bajtów.
 

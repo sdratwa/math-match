@@ -28,7 +28,7 @@ class ApiTests(unittest.TestCase):
         (folder / 'data').mkdir()
         (folder / 'sessions').mkdir()
         self.env = dict(os.environ, MATH_MATCH_STORAGE=str(folder / 'data'),
-                        MATH_MATCH_ALLOW_PUBLIC_CREATION='0')
+                        MATH_MATCH_ALLOW_PUBLIC_CREATION='1')
         subprocess.run([PHP, str(ROOT / 'bin/init.php')], env=self.env, check=True, capture_output=True)
         self.password = secrets.token_urlsafe(24)
         self.set_password(self.password)
@@ -85,6 +85,26 @@ class ApiTests(unittest.TestCase):
         status, data = self.request(client, 'login', {'password': password}, token)
         self.assertEqual(status, 200)
         return data['csrf']
+
+    def test_creation_requires_admin(self):
+        client = self.client()
+        token = self.request(client,'bootstrap')[1]['csrf']
+        quiz = dict(title='Tylko admin',pairs=[dict(term='A',description='Opis A'),dict(term='B',description='Opis B')])
+        self.assertFalse(self.request(client,'bootstrap')[1]['canCreate'])
+        self.assertEqual(self.request(client,'create',quiz,token)[0],403)
+        self.assertEqual(self.request(client,'guest.enter',dict(confirm=True),token)[0],200)
+        self.assertEqual(self.request(client,'create',quiz,token)[0],403)
+        profile = dict(nickname='Uczeń',avatar='🐼',password='zielony las pachnie',password_repeat='zielony las pachnie',consent=False)
+        self.assertEqual(self.request(client,'profile.register',profile,token)[0],200)
+        self.assertFalse(self.request(client,'bootstrap')[1]['canCreate'])
+        self.assertEqual(self.request(client,'create',quiz,token)[0],403)
+        token = self.login(client,self.password)
+        self.assertTrue(self.request(client,'bootstrap')[1]['canCreate'])
+        self.assertEqual(self.request(client,'create',quiz,token)[0],200)
+        result = self.request(client,'logout',{},token)[1]
+        self.assertFalse(self.request(client,'bootstrap')[1]['canCreate'])
+        self.assertEqual(self.request(client,'create',quiz,result['csrf'])[0],403)
+        self.assertEqual(len(self.request(client,'bootstrap')[1]['quizzes']),1)
 
     def test_rotation_revokes_two_devices_and_preserves_quizzes(self):
         first, second = self.client(), self.client()

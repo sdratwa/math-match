@@ -87,7 +87,7 @@ if (is_string($api)) {
                 'quizzes' => fetchQuizzes(),
                 'admin' => isAdmin(),
                 'adminConfigured' => readSetting('admin_hash') !== null,
-                'canCreate' => publicCreationEnabled() || isAdmin(),
+                'canCreate' => isAdmin(),
                 'csrf' => $_SESSION['csrf'],
             ]);
         }
@@ -119,12 +119,8 @@ if (is_string($api)) {
             respond(['ok' => true, 'csrf' => $_SESSION['csrf']]);
         }
         if ($api === 'create') {
-            if (!publicCreationEnabled() && !isAdmin()) {
+            if (!isAdmin()) {
                 respond(['ok' => false, 'error' => 'Dodawanie zestawów jest dostępne tylko dla administratora.'], 403);
-            }
-            $quiz = validatedQuiz($body);
-            if (!isAdmin() && !rateAllowed('create', 10, 60 * 60)) {
-                respond(['ok' => false, 'error' => 'Limit 10 zestawów na godzinę. Spróbuj później.'], 429);
             }
             respond(['ok' => true, 'id' => saveQuiz($body)]);
         }

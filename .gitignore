@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+/storage/*
+!/storage/.gitkeep
+
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.db
+
+/vendor/
+/node_modules/

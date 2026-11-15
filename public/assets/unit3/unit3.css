@@ -14,3 +14,6 @@
 
 /* Krótkie kroki lekcji z rysunkiem obok omawianego przykładu. */
 .lesson-steps{padding-left:1.7rem;margin:0 0 2rem}.lesson-steps>li{padding:0 .2rem .8rem .4rem;margin:1rem 0;border-bottom:1px solid var(--border)}.lesson-steps>li::marker{font-weight:800;color:var(--blue)}.lesson-steps .diagram{max-width:400px;margin:.8rem 0}.lesson-recall{margin-top:1.5rem;padding:1rem;border:2px solid #c7d9ee;border-radius:14px;background:#f7faff}.lesson-recall summary{min-height:44px;padding:.6rem 0;cursor:pointer;font-weight:700}.lesson-recall h2{font-size:1.2rem}
+
+/* Znane szkolne definicje i ich zastosowanie w konkretnej lekcji. */
+.definition-bridge{padding:.8rem 0;border-top:1px solid var(--border)}.definition-bridge summary{font-size:1.1rem;font-weight:750;min-height:44px;padding:.5rem 0;cursor:pointer}.school-definition{margin:.5rem 0;padding:.8rem 1rem;border-left:4px solid var(--blue);background:#eef3ff;line-height:1.65}.definition-bridge p{line-height:1.7}

@@ -7,7 +7,12 @@ kont, historii ani rankingu. Odświeżenie lub zamknięcie strony usuwa odpowied
 
 ## Korzystanie
 
-- **Uczę się:** osiem tematów, krótkie numerowane kroki na konkretnych liczbach,
+- **Uczę się:** każda lekcja zaczyna się od „To już znasz — użyj definicji”.
+  Znane angielskie nazwy rozwijają dokładne definicje podane przez rodzica.
+  Obok są krótkie zastosowania do liczb lub rysunków z danej lekcji. Łącznie
+  uwzględniono wszystkie 11 definicji, rozłożonych między odpowiednie tematy.
+  Rozróżniamy sequence i linear sequence oraz factor i multiple; ciągi
+  kwadratów i liczb trójkątnych nie mają stałego przyrostu. Dalej: osiem tematów, krótkie numerowane kroki na konkretnych liczbach,
   rysunki przy omawianym kroku i pytanie kontrolne z odpowiedzią do odkrycia.
   Patyczki uczą dokładania po 3, szafki — liczenia od końca pełnej kolumny,
   ciągi — dopisywania liczb, a dzielniki — układania klocków w rzędy.
@@ -139,7 +144,10 @@ php -l public/cambridge-unit3.php
 
 1. iPhone Safari i komputer: wejście przez ekran startowy oraz menu. Trzy duże
    opcje są czytelne. Sprawdź także iPada, jeśli jest dostępny.
-2. Uczę się → Ciągi: Amelka czyta „What is the term-to-term rule?” i „Write the
+2. Uczę się: rozwiń znane definicje w Ciągach, Szafkach i Dzielnikach.
+   Sprawdź, czy dziecko potrafi powiedzieć, dlaczego 3 jest factor of 12,
+   a 12 jest multiple of 3 oraz dlaczego 1,3,6,10 nie jest linear sequence.
+   Uczę się → Ciągi: Amelka czyta „What is the term-to-term rule?” i „Write the
    next four terms”, mówi, co zrobi, potem otwiera „Co mam zrobić?”. Sprawdź
    również schodki, patyczki, trójkąty i polecenia „Explain” oraz „Show”.
 3. Ćwiczę: bez kliknięcia pomocy polecenia są po angielsku. Otwórz tłumaczenie,

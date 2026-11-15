@@ -69,6 +69,15 @@
   function lesson(id) {
     session = null; language(false); const t = C.topics.find(t => t.id === id);
     title(`${t.icon} ${t.title}`, t.en);
+    const familiar = el('section', 'panel familiar-definitions');
+    familiar.append(el('h2', '', 'To już znasz — użyj definicji'),
+      el('p', 'small', 'Zobacz, jak znane słowo pomaga w tym zadaniu. Dotknij angielskiej nazwy, jeśli chcesz przypomnieć sobie definicję ze szkoły.'));
+    C.definitionLinks[id].forEach(([key, bridge]) => {
+      const definition = C.definitions[key], item = el('article', 'definition-bridge'), recall = el('details');
+      const term = el('summary', '', definition.term); term.lang = 'en';
+      const quote = el('blockquote', 'school-definition', definition.definition); quote.lang = 'en';
+      recall.append(term, quote); item.append(recall, el('p', '', bridge)); familiar.append(item);
+    });
     const card = el('section', 'panel'); card.append(el('h2', '', 'Krok po kroku'));
     const steps = el('ol', 'lesson-steps');
     t.text.forEach((text, i) => {
@@ -94,7 +103,7 @@
     });
     const actions = el('div', 'actions');
     actions.append(button('Spróbuję samodzielnie', () => startPractice(id, 'learn')), button('Wszystkie tematy', () => topicsScreen('learn'), true));
-    app.append(card, guide, actions);
+    app.append(familiar, card, guide, actions);
   }
   function sectionName(topic) {
     const index = C.topics.findIndex(t=>t.id===topic);

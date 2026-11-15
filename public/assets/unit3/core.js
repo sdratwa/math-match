@@ -12,8 +12,8 @@
     "en": "Number sequences",
     "icon": "🔢",
     "text": [
-      "Popatrz: 18, 25, 32, 39. To ciąg (sequence), czyli liczby ustawione po kolei. Jedna liczba w ciągu to wyraz (term).",
-      "Od 18 do 25 dodajemy 7. Od 25 do 32 też dodajemy 7. Sprawdź jeszcze: 32 + 7 = 39. Za każdym razem robimy to samo.",
+      "Popatrz: 18, 25, 32, 39. To number sequence: liczby ustawione po kolei według reguły. Sequence może też składać się z kształtów lub rysunków. Jeden element ciągu to term — tutaj jedna liczba.",
+      "Od 18 do 25 dodajemy 7. Od 25 do 32 też dodajemy 7. Sprawdź jeszcze: 32 + 7 = 39. To linear sequence: za każdym razem dodajemy tę samą liczbę.",
       "Term-to-term rule pyta: „Co robisz, żeby dostać następną liczbę?”. Tutaj odpowiedz: Add 7 each time. To znaczy: za każdym razem dodaj 7.",
       "Next four terms to cztery następne liczby. Zacznij za ostatnią podaną: 39 + 7 = 46, potem 53, 60 i 67.",
       "Is 74 in this sequence? pyta, czy dotrzemy do 74. Dopisuj liczby, dodając po 7. Po 67 dostaniesz 74, więc odpowiedź to Yes."
@@ -43,7 +43,7 @@
     "en": "Growing patterns and staircases",
     "icon": "🪜",
     "text": [
-      "Pattern oznacza tutaj kolejny rysunek. Pattern 1 ma jeden kwadrat. Policz go.",
+      "Te rysunki tworzą spatial pattern. Pattern 1 oznacza tutaj pierwszy rysunek, Pattern 2 — drugi. Na pierwszym jest jeden kwadrat. Policz go.",
       "Pattern 2 ma na górze 1 kwadrat, a pod nim 3. Razem: 1 + 3 = 4. Środkowy kwadrat na dole jest dokładnie pod górnym.",
       "Pattern 3 ma rzędy po 1, 3 i 5 kwadratów. Razem: 1 + 3 + 5 = 9. Każdy nowy dolny rząd ma o 2 kwadraty więcej.",
       "Zbuduj w myślach Pattern 4: pod rzędem z 5 kwadratów dodaj rząd z 7. Było 9 kwadratów, dodajesz 7, więc jest 16.",
@@ -82,11 +82,11 @@
     "text": [
       "Przesuń palec w prawo po liczbach 1, 5, 9. To rząd (row). Teraz przesuń palec w dół po 1, 2, 3, 4. To kolumna (column).",
       "Tutaj najpierw numerujemy całą kolumnę w dół: 1, 2, 3, 4. Potem następną: 5, 6, 7, 8. Znajdź 14 — jest w drugim rzędzie.",
-      "Idź palcem w prawo po trzecim rzędzie: 3, 7, 11, 15, 19. Numery rosną o 4, bo każda kolumna ma cztery szafki.",
+      "Idź palcem w prawo po trzecim rzędzie: 3, 7, 11, 15, 19. Numery rosną o 4, bo każda kolumna ma cztery szafki. To linear sequence, a jego term-to-term rule to Add 4 each time.",
       "Jak znaleźć szafkę 46 bez rysowania całej tabeli? 4 × 11 = 44. To koniec jedenastej kolumny, w rzędzie 4. Następna szafka, 45, wraca do rzędu 1. Szafka 46 jest tuż pod nią, w rzędzie 2.",
       "Liczba 20 kończy pełną kolumnę: 4 × 5 = 20. Dlatego jest w rzędzie 4. Nie ma rzędu 0!"
     ],
-    "example": "Słowo remainder oznacza resztę, czyli to, co zostaje po odliczeniu pełnych grup.\nPrzy 46 odliczamy 44 szafki w pełnych kolumnach. Zostają jeszcze 2: 45 i 46.\nPo angielsku: 44 is at the bottom. 45 is in row 1, so 46 is in row 2.",
+    "example": "Słowo remainder oznacza resztę, czyli to, co zostaje po odliczeniu pełnych grup.\n44 to multiple of 4, bo 4 × 11 = 44. To 44 szafki w pełnych kolumnach. Do 46 zostają jeszcze 2: 45 i 46.\nPo angielsku: 44 is at the bottom. 45 is in row 1, so 46 is in row 2.",
     "tip": "Gdy pytają o dziesięć pierwszych numerów w rzędzie, zacznij od numeru rzędu i dopisz dziewięć kolejnych, dodając po 4.",
     "stepDiagrams": {
       "0": {
@@ -167,10 +167,10 @@
     "en": "Triangular number patterns",
     "icon": "🔺",
     "text": [
-      "Zacznij od jednego pola. To Pattern 1.",
+      "Zacznij od jednego pola. To Pattern 1. Z definicji znasz trójkąt z kropek (dots); tutaj zamiast kropek układamy małe kwadraty.",
       "Pod nim dodaj rząd z 2 polami. Razem: 1 + 2 = 3. To Pattern 2.",
       "Dodaj na dole rząd z 3 polami. Były 3 pola, dodajesz 3: razem 6. To Pattern 3.",
-      "Następny rząd ma 4 pola. Było 6, dodajesz 4, więc jest 10. Potem dodasz rząd z 5 polami: 10 + 5 = 15.",
+      "Następny rząd ma 4 pola. Było 6, dodajesz 4, więc jest 10. Potem dodasz rząd z 5 polami: 10 + 5 = 15. Liczby 1, 3, 6, 10, 15 to triangular numbers — liczą wszystkie pola w kolejnych trójkątach.",
       "Explain how the sequence grows pyta, jak rosną liczby. Nie dodajemy ciągle tej samej liczby! Dodajemy 2, potem 3, potem 4. Po angielsku: Add 2, then 3, then 4, and so on."
     ],
     "example": "Difference znaczy różnica: o ile następna liczba jest większa?\nOd 1 do 3 dodajemy 2. Możesz zapisać 3 − 1 = 2.\nOd 3 do 6 dodajemy 3. Możesz zapisać 6 − 3 = 3.",
@@ -204,7 +204,7 @@
     "en": "Factors and prime numbers",
     "icon": "🔍",
     "text": [
-      "Masz 12 klocków. Możesz ułożyć 3 rzędy po 4 klocki: 3 × 4 = 12. Nic nie zostaje. Dlatego 3 i 4 są dzielnikami (factors) liczby 12.",
+      "Masz 12 klocków. Możesz ułożyć 3 rzędy po 4 klocki: 3 × 4 = 12. W drugą stronę: 12 ÷ 3 = 4, bez reszty. To właśnie divides exactly. Dlatego 3 jest factor of 12. Tak samo 4 jest dzielnikiem 12.",
       "Szukaj wszystkich par mnożenia dających 12: 1 × 12, 2 × 6, 3 × 4. Zbierz liczby z obu stron mnożenia. Dzielniki 12 to 1, 2, 3, 4, 6, 12. Każdą liczbę zapisz tylko raz.",
       "Teraz weź 7 klocków. Przy rzędach po 2 zostaje 1 klocek: 2 + 2 + 2 + 1. Przy rzędach po 3 też zostaje 1: 3 + 3 + 1. Sprawdź też rzędy po 4, 5 i 6 — za każdym razem coś zostaje. Bez reszty pasują tylko 1 i 7. To liczba pierwsza (prime number).",
       "Prime number ma dokładnie dwa dzielniki: 1 i samą siebie. Liczba 6 ma więcej: 1, 2, 3, 6. Nazywamy ją liczbą złożoną (composite number).",
@@ -263,6 +263,163 @@
     for (let x = 0; x < n; x++) { result.push([x, 0, x + 1, 0]); result.push([x, 1, x + 1, 1]); }
     return result;
   }
+  // Definicje podane przez rodzica — zachowujemy angielskie brzmienie szkolne.
+  const definitions = {
+  "linear": {
+    "term": "Linear sequence",
+    "definition": "a number pattern which increases or decreases by the same amount each time"
+  },
+  "sequence": {
+    "term": "Sequence",
+    "definition": "an ordered set of numbers, shapes or other mathematical objects arranged according to a rule"
+  },
+  "term": {
+    "term": "Term",
+    "definition": "an item in a sequence"
+  },
+  "rule": {
+    "term": "Term-to-term rule",
+    "definition": "a rule you can use to find out how to get from one term to the next"
+  },
+  "spatial": {
+    "term": "Spatial pattern",
+    "definition": "a pattern that includes drawings"
+  },
+  "square": {
+    "term": "Square numbers",
+    "definition": "a number you get when you multiply an integer by itself"
+  },
+  "triangular": {
+    "term": "Triangular number",
+    "definition": "triangular numbers can be shown as patterns of dots arranged as a triangle. Each row contains one extra dot."
+  },
+  "composite": {
+    "term": "Composite number",
+    "definition": "a number with more than two factors"
+  },
+  "factor": {
+    "term": "Factor",
+    "definition": "a whole number that divides exactly into another number"
+  },
+  "multiple": {
+    "term": "Multiple",
+    "definition": "the result of multiplying a number by a positive whole number"
+  },
+  "prime": {
+    "term": "Prime number",
+    "definition": "a number with exactly two factors"
+  }
+};
+  const definitionLinks = {
+  "sequences": [
+    [
+      "sequence",
+      "W tej lekcji ciąg składa się z liczb: 18, 25, 32, 39. W znanej definicji mogą to być też kształty lub inne obiekty — ważna jest kolejność i reguła."
+    ],
+    [
+      "term",
+      "18 to pierwszy term, a 25 to drugi term. W ciągu rysunków jeden cały rysunek też może być term."
+    ],
+    [
+      "linear",
+      "18, 25, 32, 39 to linear sequence: za każdym razem dodajemy tyle samo, czyli 7. W 20, 17, 14 odejmujemy po 3 — to też linear sequence."
+    ],
+    [
+      "rule",
+      "Znana definicja mówi o przejściu od jednego term do następnego. Tutaj 18 + 7 = 25, więc reguła brzmi: Add 7 each time."
+    ]
+  ],
+  "stairs": [
+    [
+      "spatial",
+      "Rysunki rosnących schodków tworzą spatial pattern. Policzenie kwadratów na kolejnych rysunkach daje ciąg 1, 4, 9, 16."
+    ],
+    [
+      "square",
+      "Policz kwadraty: 1, 4, 9, 16. To wyniki 1 × 1, 2 × 2, 3 × 3, 4 × 4 — dokładnie multiply an integer by itself ze znanej definicji."
+    ],
+    [
+      "linear",
+      "Liczba kwadratów 1, 4, 9, 16 nie tworzy linear sequence: dodajemy 3, potem 5, potem 7. Za to liczba stopni 2, 4, 6, 8 tworzy linear sequence: zawsze dodajemy 2."
+    ]
+  ],
+  "rows": [
+    [
+      "multiple",
+      "4, 8, 12, 16 to multiples of 4: wyniki 4 × 1, 4 × 2, 4 × 3, 4 × 4. W tabeli szafek te numery kończą kolumny."
+    ],
+    [
+      "linear",
+      "Trzeci rząd ma numery 3, 7, 11, 15. To linear sequence, bo dodajemy po 4. Te liczby nie są multiples of 4 — samo dodawanie po 4 nie wystarczy!"
+    ]
+  ],
+  "squares": [
+    [
+      "square",
+      "Multiply an integer by itself: dla 3 bierzemy 3 × 3 = 9. Zapis 3² znaczy to samo. 9 jest square number. Integer oznacza liczbę całkowitą, np. 3; w tych zadaniach używamy dodatnich liczb całkowitych."
+    ]
+  ],
+  "sticks": [
+    [
+      "spatial",
+      "Połączone kwadraty na kolejnych rysunkach to spatial pattern. Patrzymy, jak zmienia się rysunek, a potem liczymy jego patyczki."
+    ],
+    [
+      "rule",
+      "Liczby patyczków to 4, 7, 10, 13. Aby przejść od jednego term do następnego, dodajemy 3: Add 3 each time."
+    ],
+    [
+      "linear",
+      "Za każdym razem przybywają 3 patyczki, więc 4, 7, 10, 13 to linear sequence. Znana definicja opisuje to słowami the same amount each time."
+    ]
+  ],
+  "triangles": [
+    [
+      "triangular",
+      "Pamiętasz each row contains one extra dot? Rzędy mają 1, 2, 3, 4 kropki. W arkuszu kropki zastępują małe kwadraty — liczymy je tak samo. Razem we wzorze 4 jest 10."
+    ],
+    [
+      "spatial",
+      "Kolejne rysunki trójkątów tworzą spatial pattern. Liczby wszystkich pól na tych rysunkach to 1, 3, 6, 10."
+    ],
+    [
+      "linear",
+      "1, 3, 6, 10 to sequence, ale nie linear sequence. Dodajemy 2, potem 3, potem 4, a nie tę samą liczbę za każdym razem."
+    ]
+  ],
+  "factors": [
+    [
+      "factor",
+      "Divides exactly oznacza: dzieli bez reszty. 12 ÷ 3 = 4 i nic nie zostaje, więc 3 jest factor of 12."
+    ],
+    [
+      "multiple",
+      "Ten sam rachunek w drugą stronę: 3 × 4 = 12. Dlatego 12 jest multiple of 3. Zapamiętaj parę zdań: 3 is a factor of 12. 12 is a multiple of 3."
+    ],
+    [
+      "prime",
+      "Exactly two factors: dla 7 są to tylko 1 i 7. Dlatego 7 jest prime number. Sama nieparzystość nie wystarcza."
+    ],
+    [
+      "composite",
+      "More than two factors: dla 6 są to 1, 2, 3 i 6. Dlatego 6 jest composite number. Liczba 1 ma tylko jeden dzielnik, więc nie pasuje do żadnej z tych dwóch nazw."
+    ]
+  ],
+  "mixed": [
+    [
+      "rule",
+      "W poleceniu starts at 6 and increases by 8 each time reguła jest już podana: Add 8 each time. Użyj jej, aby wypisać kolejne terms."
+    ],
+    [
+      "prime",
+      "Przy wyborze prime number wróć do exactly two factors. Możesz uzasadnić: 43 has exactly two factors: 1 and 43."
+    ],
+    [
+      "composite",
+      "Przy wyborze composite number szukaj dodatkowych dzielników. Dla 44 mamy 4 × 11 = 44, więc oprócz 1 i 44 pasują też 4 i 11."
+    ]
+  ]
+};
   const instructions = {
     sequences: [
       ['Each sequence increases by the same amount each time. Complete the missing numbers.', 'Każdy ciąg rośnie o tę samą liczbę. Uzupełnij luki. Najpierw znajdź różnicę między sąsiednimi liczbami.'],
@@ -556,5 +713,5 @@
         points:results.reduce((s,r)=>s+r.points,0),total:results.reduce((s,r)=>s+r.total,0),manual:results.reduce((s,r)=>s+r.manual,0)};
     }).filter(r=>r.count);
   }
-  return {examIds,inlineAnswers,topics,instructions,ids,generate,practice,exam,grade,report,expectedText,factors,prime,triangular,rowOf,cells,stickSegments,parseInteger};
+  return {definitions,definitionLinks,examIds,inlineAnswers,topics,instructions,ids,generate,practice,exam,grade,report,expectedText,factors,prime,triangular,rowOf,cells,stickSegments,parseInteger};
 });

@@ -42,7 +42,7 @@ class Unit3Http(unittest.TestCase):
                     self.assertNotIn('unsafe-inline', response.headers['Content-Security-Policy'])
                     self.assertIsNone(response.headers.get('Set-Cookie'))
                     self.assertIn('id="unitApp"', html)
-                for asset, content_type in [('core.js', 'javascript'), ('ui.js', 'javascript'), ('unit3.css', 'text/css')]:
+                for asset, content_type in [('core.js', 'javascript'), ('draft.js', 'javascript'), ('ui.js', 'javascript'), ('unit3.css', 'text/css')]:
                     with client.open(base + 'assets/unit3/' + asset, timeout=3) as response:
                         self.assertEqual(response.status, 200)
                         self.assertIn(content_type, response.headers['Content-Type'])

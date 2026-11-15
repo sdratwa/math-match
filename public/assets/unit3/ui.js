@@ -2,15 +2,36 @@
 (() => {
   'use strict';
   const C = window.Unit3, app = document.getElementById('unitApp');
+  const draft = window.Unit3Draft.create(() => window.sessionStorage);
   let session = null, position = 0;
+  function saveProgress() {
+    if (!session) return;
+    const saveOK = draft.save(session, position);
+    const status = document.getElementById('saveStatus');
+    if (status) {
+      const english = document.documentElement.lang === 'en';
+      const message = saveOK
+        ? (english ? 'Saved in this tab. Refreshing will restore your work. Keep this tab open.' : 'Zapisano w tej karcie. Odświeżenie przywróci pracę. Zachowaj otwartą kartę.')
+        : (english ? 'Could not save in this tab. Do not refresh or close it: your latest answers may be lost.' : 'Nie udało się zapisać w tej karcie. Nie odświeżaj jej ani nie zamykaj: ostatnie odpowiedzi mogą zniknąć.');
+      if (status.textContent !== message) status.textContent = message;
+      status.className = saveOK ? 'small' : 'notice';
+    }
+  }
+  function clearProgress() {
+    session = null;
+    if (!draft.clear()) {
+      const notice = el('p', 'notice', 'Nie udało się usunąć kopii pracy. Zamknij tę kartę przed przekazaniem urządzenia innej osobie.');
+      notice.setAttribute('role', 'alert'); app.append(notice);
+    }
+  }
   function language(english) {
     document.documentElement.lang = english ? 'en' : 'pl';
     document.getElementById('unitHome').textContent = english ? 'Module home' : 'Start modułu';
     document.getElementById('confirmTitle').textContent = english ? 'Finish this activity?' : 'Zakończyć tę aktywność?';
     document.getElementById('confirmNo').textContent = english ? 'Stay' : 'Zostań';
     document.querySelector('footer').textContent = english
-      ? 'Stage 5 · Unit 3. No login. Answers stay on this open page only. Refreshing deletes them.'
-      : 'Przygotowanie do sprawdzianu · Stage 5 · Unit 3. Bez logowania. Odpowiedzi są tylko na tej otwartej stronie. Odświeżenie je usuwa.';
+      ? 'Stage 5 · Unit 3. No login. Work is saved in this tab, without sending it to a server. Keep this tab open to continue later.'
+      : 'Przygotowanie do sprawdzianu · Stage 5 · Unit 3. Bez logowania. Praca zapisywana w tej karcie, bez wysyłania na serwer. Zachowaj kartę, aby wrócić później.';
   }
   const el = (tag, className = '', text) => {
     const n = document.createElement(tag); if (className) n.className = className;
@@ -22,6 +43,9 @@
   function title(text, eyebrow = '') {
     app.replaceChildren(); if (eyebrow) app.append(el('p', 'eyebrow', eyebrow));
     const h = el('h1', '', text); h.tabIndex = -1; app.append(h); h.focus({ preventScroll: true });
+    if (session) {
+      const status = el('p', 'small'); status.id = 'saveStatus'; status.setAttribute('role', 'status'); app.append(status);
+    }
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
   function confirmAction(message, label, fn) {
@@ -35,16 +59,18 @@
     dialog.showModal(); no.focus();
   }
   function leave(fn) {
-    if (session && !session.finished) confirmAction('Your current answers will be lost. You can stay and finish the questions.', 'Leave', fn);
-    else fn();
+    const discard = () => { clearProgress(); fn(); };
+    if (session && !session.finished) confirmAction('Leaving will delete your saved work in this tab. Stay to continue. Refreshing the page keeps your answers.', 'Leave and delete', discard);
+    else discard();
   }
   document.getElementById('unitHome').addEventListener('click', () => leave(home));
   document.querySelector('.brand').addEventListener('click', e => {
-    if (session && !session.finished) { e.preventDefault(); leave(() => { window.location.href = 'index.php'; }); }
+    e.preventDefault(); leave(() => { window.location.href = 'index.php'; });
   });
   function home() {
     session = null; language(false);
     title('Gotowi na Unit 3?', 'CAMBRIDGE PRIMARY MATHEMATICS · STAGE 5');
+    clearProgress();
     app.append(el('p', 'intro', 'Rozpoznaj angielskie polecenia z arkusza, przećwicz matematykę i spróbuj sprawdzianu po angielsku. Przygotuj kartkę i ołówek.'));
     const modes = el('div', 'mode-grid');
     for (const [icon, name, desc, fn] of [
@@ -58,6 +84,7 @@
   }
   function topicsScreen(mode) {
     session = null; language(false); title(mode === 'learn' ? 'Czego się dziś uczymy?' : 'Co chcesz poćwiczyć?');
+    clearProgress();
     app.append(el('p', 'intro', mode === 'learn' ? 'Wybierz temat. Przeczytaj przykład, obejrzyj rysunek i spróbuj samodzielnie.' : 'Polecenia i podpunkty są po angielsku, jak w arkuszu. Najpierw spróbuj bez tłumaczenia. Runda obejmuje 3–6 pełnych zadań, zależnie od działu.'));
     if (mode === 'practice') app.append(button('🎲 Po jednym zadaniu z każdego działu', () => startPractice('all')));
     const grid = el('div', 'topic-grid');
@@ -69,6 +96,7 @@
   function lesson(id) {
     session = null; language(false); const t = C.topics.find(t => t.id === id);
     title(`${t.icon} ${t.title}`, t.en);
+    clearProgress();
     const familiar = el('section', 'panel familiar-definitions');
     familiar.append(el('h2', '', 'To już znasz — użyj definicji'),
       el('p', 'small', 'Zobacz, jak znane słowo pomaga w tym zadaniu. Dotknij angielskiej nazwy, jeśli chcesz przypomnieć sobie definicję ze szkoły.'));
@@ -117,6 +145,7 @@
   }
   function examMenu() {
     session = null; language(false); title('Ile chcesz zrobić teraz?', 'PRÓBNY SPRAWDZIAN');
+    clearProgress();
     app.append(el('p', 'intro', 'Możesz wybrać tylko jedną sekcję. Każde zadanie zawiera podpunkty, tak jak w arkuszu. Wynik zobaczysz po zakończeniu wybranej części.'));
     const grid = el('div', 'topic-grid');
     C.topics.forEach(t => {
@@ -132,10 +161,11 @@
   function startExam(topic, original = false) { start('exam', topic, C.exam(Math.random, original, topic)); }
   function examIntro(topic = 'all') {
     session = null; language(false); title(sectionName(topic), 'PRÓBNY SPRAWDZIAN');
+    clearProgress();
     const card = el('section', 'panel');
     card.append(el('p', 'intro', `${questionCount(C.examIds(topic).length)} z podpunktami. ${topic === 'all' ? 'Wszystkie 8 sekcji.' : 'Tylko wybrana sekcja.'} Możesz wracać do wcześniejszych pytań i poprawiać odpowiedzi.`));
     const list = el('ul');
-    ['Nie ma limitu czasu — możesz pracować spokojnie.', 'Nie pokażemy podpowiedzi ani poprawnych odpowiedzi przed końcem.', 'Możesz pominąć zadanie. Puste odpowiedzi pokażemy w raporcie jako do powtórzenia.', 'Nie odświeżaj i nie zamykaj strony: odpowiedzi nie są trwale zapisywane.'].forEach(x => list.append(el('li', '', x)));
+    ['Nie ma limitu czasu — możesz pracować spokojnie.', 'Nie pokażemy podpowiedzi ani poprawnych odpowiedzi przed końcem.', 'Możesz pominąć zadanie. Puste odpowiedzi pokażemy w raporcie jako do powtórzenia.', 'Odpowiedzi zapisują się po każdej zmianie w tej karcie. Po odświeżeniu wrócisz do tych samych zadań. Nie zamykaj karty; zapis nie jest przypisany do konta.'].forEach(x => list.append(el('li', '', x)));
     card.append(list, el('p', 'notice', 'Cały sprawdzian jest po angielsku, z podpunktami jak w DOCX. Uzasadnienia wpisz po angielsku lub jako rachunek. Automat sprawdzi liczby i krótkie reguły; pisemne uzasadnienia porównacie z dorosłym ze wzorem po oddaniu pracy.'));
     const actions = el('div', 'actions');
     actions.append(button('Sprawdzian — nowe liczby', () => startExam(topic)),
@@ -309,6 +339,7 @@
           clearFieldResult(f.id);
           feedback.replaceChildren(); delete s.checked[position]; next.disabled = true;
         }
+        saveProgress();
       }, options);
       const badge = el('span', 'answer-result'), message = el('span', 'answer-correction');
       badge.id = `${f.id}-result`; message.id = `${f.id}-correction`;
@@ -353,13 +384,14 @@
     if (!test) {
       const actions = el('div', 'actions'), check = el('button', '', 'Check answers'); check.type = 'submit';
       const hintBox = el('p', 'hint', q.hint); hintBox.lang = 'pl'; hintBox.hidden = !s.hints[position];
-      const hint = button('Hint / Podpowiedź', () => { s.helped[position] = true; s.hints[position] = true; hintBox.hidden = false; }, true);
+      const hint = button('Hint / Podpowiedź', () => { s.helped[position] = true; s.hints[position] = true; hintBox.hidden = false; saveProgress(); }, true);
       const translationBox = el('section', 'translation'); translationBox.lang = 'pl'; translationBox.hidden = !s.translations[position];
       translationBox.append(el('h3', '', 'Znaczenie polecenia'), el('p', '', q.pl));
       q.parts.filter(p=>p.pl).forEach(p=>translationBox.append(el('p', '', p.pl)));
       const translation = button('Translate / Tłumaczenie', () => {
         s.helped[position] = true; s.translations[position] = !s.translations[position];
         translationBox.hidden = !s.translations[position]; translation.setAttribute('aria-expanded', String(!translationBox.hidden));
+        saveProgress();
       }, true);
       translation.setAttribute('aria-expanded', String(!translationBox.hidden));
       actions.append(check, translation, hint); form.append(actions, translationBox, hintBox);
@@ -395,9 +427,11 @@
       if (r.manual) feedback.append(el('p', 'notice', 'Ask an adult to read your explanation with you. Does it explain why? Your words can be different from the example. The computer has not checked this part.'));
       feedback.append(el('p', 'small', 'You can fix your answer and check again. At the end, the report shows what you wrote the first time.'));
       next.disabled = false;
+      saveProgress();
     }
     form.addEventListener('submit', e => { e.preventDefault(); if (!test) checkAnswer(); });
     if (!test && s.checked[position]) checkAnswer();
+    saveProgress();
   }
   function answered(q, a) {
     return q.fields.every(f => {
@@ -451,6 +485,19 @@
     actions.append(button(test ? 'Ten sam zakres — nowe liczby' : 'Nowe liczby — kolejna runda', () => test ? startExam(s.topic) : startPractice(s.topic, s.mode)));
     if (test) actions.append(button('Wybierz inną sekcję', examMenu, true));
     actions.append(button('Start modułu', home, true)); app.append(actions);
+    saveProgress();
   }
-  home();
+  const saved = draft.load();
+  if (saved.status === 'saved') {
+    session = saved.session; position = saved.position;
+    try {
+      if (session.finished) summary(); else questionScreen();
+    } catch {
+      home(); app.append(el('p', 'notice', 'Nie udało się odtworzyć poprzedniej pracy. Zapis jest uszkodzony lub niezgodny z tą wersją modułu.'));
+    }
+  } else {
+    home();
+    if (saved.status === 'invalid') app.append(el('p', 'notice', 'Nie udało się odtworzyć poprzedniej pracy. Zapis jest uszkodzony lub niezgodny z tą wersją modułu.'));
+    if (saved.status === 'unavailable') app.append(el('p', 'notice', 'Przeglądarka blokuje zapis w tej karcie. Odświeżenie może usunąć odpowiedzi.'));
+  }
 })();

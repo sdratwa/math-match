@@ -3,7 +3,32 @@
 Moduł otwiera się przez przycisk „Cambridge Unit 3” na ekranie startowym
 lub w menu Math Match, a także bezpośrednio pod `cambridge-unit3.php`.
 Działa bez logowania i bez dostępu do SQLite. Nie zmienia istniejących quizów,
-kont, historii ani rankingu. Odświeżenie lub zamknięcie strony usuwa odpowiedzi.
+kont, historii ani rankingu. Odświeżenie przywraca bieżącą pracę z pamięci
+tej samej karty przeglądarki (`sessionStorage`). Zamknięcie karty może usunąć zapis.
+
+## Zachowanie pracy po odświeżeniu
+
+Ćwiczenia i próbny sprawdzian zapisują się synchronicznie po każdej zmianie
+odpowiedzi, bez oczekiwania na utratę fokusu, następne pytanie lub zamknięcie
+strony. Kopia obejmuje cały wygenerowany zestaw (również losowe liczby),
+wszystkie odpowiedzi, tekst uzasadnień, zaznaczenia, wzory z patyczków i siatki,
+numer pytania oraz stan podpowiedzi, tłumaczeń i pierwszych odpowiedzi.
+Odświeżenie od razu odtwarza pytanie albo gotowy raport; nie losuje nowych zadań.
+
+Zapis dotyczy jednej karty i jednego bieżącego podejścia, bez logowania i bez
+wysyłania danych na serwer. Nowa runda zastępuje poprzednią kopię. Potwierdzone
+opuszczenie nieukończonej aktywności usuwa ją. Przejście z raportu do menu lub
+lekcji też czyści kopię. Na wspólnym urządzeniu zakończ aktywność albo zamknij
+kartę przed przekazaniem jej kolejnej osobie. Zduplikowanie karty przez
+przeglądarkę może skopiować jej początkowy zapis; dalsze zmiany są niezależne.
+Nie gwarantujemy odzyskania po zamknięciu karty, wyczyszczeniu danych przeglądarki
+ani na innym urządzeniu. To ochrona przed odświeżeniem, nie historia wyników.
+
+Widoczny komunikat potwierdza zapis albo ostrzega o blokadzie/braku miejsca
+w pamięci przeglądarki. Po błędzie zapisu nadal można pracować, lecz odświeżenie
+może utracić zmiany od ostatniego poprawnego zapisu. Uszkodzony lub niezgodny
+z wersją modułu zapis powoduje powrót do startu z komunikatem. Format kopii ma wersję 1;
+zmiany niezgodne z zapisanym modelem wymagają zmiany wersji.
 
 ## Korzystanie
 
@@ -62,7 +87,7 @@ nawet za sam fakt wpisania tekstu. Nie oceniamy gramatyki ani pisowni uzasadnie�
 
 Jest to lokalna samoocena z deterministycznym sprawdzaniem matematyki w JS,
 bez AI i bez zabezpieczania odpowiedzi przed odczytem kodu. Wyniki nie są
-kwalifikowane do rankingu. Nie wprowadzono trwałego zapisu ani trybu offline.
+kwalifikowane do rankingu. Nie wprowadzono serwerowego zapisu ani trybu offline.
 Otwarta i załadowana strona nie wysyła odpowiedzi do sieci.
 
 ## Źródło i weryfikacja odpowiedzi
@@ -125,18 +150,25 @@ oraz zapisać angielskie uzasadnienia na kartce.
 
 - `public/cambridge-unit3.php`: osobna strona, nagłówki ochronne, brak sesji i bazy.
 - `public/assets/unit3/core.js`: lekcje poleceń, 17 generatorów, wariant oryginalny, ocena i raport.
-- `public/assets/unit3/ui.js`: widoki, odpowiedzi w pamięci, dostępne SVG i budowanie.
+- `public/assets/unit3/ui.js`: widoki, automatyczny zapis i odtworzenie, dostępne SVG i budowanie.
+- `public/assets/unit3/draft.js`: wersjonowana kopia pracy w pamięci karty,
+  kontrola struktury oraz obsługa błędów dostępu i zapisu, bez DOM i sieci.
 - `public/assets/unit3/unit3.css`: wygląd telefonu, tabletu i komputera.
 - `tests/unit3.cjs`: niezależne wyrocznie matematyczne dla 3400 zadań,
   oryginalny arkusz i klucz 1–17, angielskie polecenia, geometria, granice,
   odpowiedzi wielowariantowe, raport oraz brak automatycznej oceny uzasadnień.
 - `tests/unit3-http.py`: lokalny HTTP, zasoby i nagłówki, działanie bez bazy.
+- `tests/unit3-draft.cjs`: zapis i odtworzenie wszystkich rodzajów odpowiedzi,
+  zadań losowych i oryginalnych, pozycji, pierwszej próby, raportu, czyszczenia
+  oraz uszkodzonej lub niedostępnej pamięci. Bez przeglądarki i DOM.
 
 ```sh
 node tests/unit3.cjs
+node tests/unit3-draft.cjs
 python3 tests/unit3-http.py
 node --check public/assets/unit3/core.js
 node --check public/assets/unit3/ui.js
+node --check public/assets/unit3/draft.js
 php -l public/cambridge-unit3.php
 ```
 
@@ -176,8 +208,19 @@ php -l public/cambridge-unit3.php
 7. Uruchom nowy sprawdzian z nowymi liczbami. Sprawdź zmienione wartości oraz
    zachowane angielskie sformułowania i podpunkty.
 8. Klawiatura/VoiceOver: Tab, Enter, wybory, etykiety pól, siatka, komunikaty,
-   fokus dialogu i Escape. Sprawdź też stare quizy i logowanie. Odświeżenie
-   modułu usuwa lokalne odpowiedzi, zgodnie z informacją na stronie.
+   fokus dialogu i Escape. Sprawdź też stare quizy i logowanie.
+9. Ochrona przed odświeżeniem (Safari na iPhone/iPad i komputer): w pełnym
+   sprawdzianie z losowymi liczbami wypełnij kilka luk, uzasadnienie, patyczki,
+   siatkę i wybory. Odśwież bez wychodzenia z ostatniego pola. Oczekuj tego
+   samego pytania, tych samych liczb oraz wszystkich odpowiedzi po cofnięciu.
+   Usuń fragment odpowiedzi i odśwież ponownie — usunięcie też ma się zapisać.
+   Powtórz dla jednej sekcji, liczb z DOCX oraz ćwiczeń z podpowiedzią i oceną.
+   Przed oddaniem odświeżony sprawdzian nadal nie pokazuje rozwiązań.
+10. Oddaj sprawdzian i odśwież raport: wynik i uzasadnienia mają pozostać.
+    Nowa runda ma być pusta. Przy wyjściu z nieukończonej pracy „Stay” zachowuje
+    zapis, „Leave and delete” usuwa go; odświeżenie nie przywraca usuniętej rundy.
+    Otwórz niezależnie drugą kartę i sprawdź niezależność odpowiedzi.
+    Przy zablokowanej pamięci ma być ostrzeżenie zamiast potwierdzenia zapisu.
 
 ## Publikacja i wycofanie
 
@@ -188,3 +231,11 @@ Nie uruchamiaj inicjalizacji, migracji ani resetu bazy. Nie zeruj rankingu.
 Wycofanie polega na powrocie do poprzednich plików kodu; baza nie wymaga odtwarzania,
 więc nowe wyniki starych quizów nie zostaną utracone. Ręczny test po publikacji:
 wejście do modułu, dostępność zasobów, jedna odpowiedź i powrót do starych quizów.
+
+Dla aktualizacji chroniącej przed odświeżeniem publikuj razem
+`cambridge-unit3.php`, `assets/unit3/ui.js` i nowy `assets/unit3/draft.js`.
+Zachowaj aktualny `core.js` i CSS. Wersja URL skryptu UI jest podniesiona,
+aby przeglądarka pobrała poprawkę. Schemat SQLite pozostaje bez zmian.
+Odbiór obejmuje dodatkowo scenariusze 9–10 powyżej. Wycofanie tych trzech plików
+przywraca poprzednie zachowanie bez ochrony; lokalne kopie nie są importowane
+do starego interfejsu. Aktualizację najlepiej wykonać po zakończeniu pracy dzieci.

@@ -16,7 +16,8 @@ header('Cache-Control: no-store');
   <title>Cambridge Unit 3 — Math Match</title>
   <link rel="stylesheet" href="assets/unit3/unit3.css?v=7">
   <script src="assets/unit3/core.js?v=8" defer></script>
-  <script src="assets/unit3/ui.js?v=8" defer></script>
+  <script src="assets/unit3/draft.js?v=1" defer></script>
+  <script src="assets/unit3/ui.js?v=9" defer></script>
 </head>
 <body>
   <div class="u3-shell">
@@ -28,7 +29,7 @@ header('Cache-Control: no-store');
       <p>Przygotowujemy materiał…</p>
       <noscript>Ten moduł wymaga JavaScript. Włącz JavaScript w przeglądarce, aby rozwiązywać zadania.</noscript>
     </main>
-    <footer>Przygotowanie do sprawdzianu · Stage 5 · Unit 3<br>Bez logowania. Wyniki są tylko na tej otwartej stronie. Odświeżenie je usuwa.</footer>
+    <footer>Przygotowanie do sprawdzianu · Stage 5 · Unit 3<br>Bez logowania. Praca zapisywana w tej karcie, bez wysyłania na serwer. Zachowaj kartę, aby wrócić później.</footer>
   </div>
   <dialog id="unitConfirm" aria-labelledby="confirmTitle" aria-describedby="confirmText">
     <h2 id="confirmTitle">Zakończyć tę aktywność?</h2>

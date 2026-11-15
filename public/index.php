@@ -156,7 +156,7 @@ if (is_string($api)) {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Math Match — dopasuj pojęcia</title>
-  <link rel="stylesheet" href="assets/app.css?v=10">
+  <link rel="stylesheet" href="assets/app.css?v=11">
   <script src="assets/app.js?v=11" defer></script>
 </head>
 <body>
@@ -167,6 +167,7 @@ if (is_string($api)) {
         <div><div class="eyebrow">NAUKA PRZEZ ZABAWĘ</div><h1>Math Match <span aria-hidden="true">✨</span></h1></div>
       </div>
       <div class="topactions">
+        <a class="btn unit3-link" href="cambridge-unit3.php">📘 Cambridge Unit 3</a>
         <button type="button" class="btn btn-primary" id="newQuiz">＋ Nowy zestaw</button>
         <button type="button" class="btn" id="adminButton">🔐 Admin</button>
       </div>
@@ -178,6 +179,7 @@ if (is_string($api)) {
       <h2 id="welcomeHeading" tabindex="-1">Gotowi na zabawę? 🧩</h2>
       <p class="muted">Łącz pojęcia, ćwicz i sprawdzaj, ile już umiesz. Wybierz, jak chcesz grać.</p>
       <div class="welcome-actions">
+        <a class="btn btn-primary unit3-link" href="cambridge-unit3.php">📘 Przygotuj się do sprawdzianu — Cambridge Unit 3</a>
         <button class="btn btn-primary" id="chooseGuest" type="button">🎮 Graj jako Gość</button>
         <button class="btn" id="chooseLogin" type="button">Zaloguj się</button>
         <button class="btn" id="chooseRegister" type="button">Utwórz profil</button>

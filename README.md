@@ -40,6 +40,16 @@ w CLI i konfiguracji puli PHP-FPM. Do testów zawsze używaj osobnego katalogu.
 
 ## Korzystanie
 
+**Cambridge Unit 3:** przycisk na ekranie startowym i w menu otwiera
+`cambridge-unit3.php`. Wydzielony moduł oferuje Uczę się, Ćwiczę i Próbny
+sprawdzian, bez logowania i bez zapisu do bazy. Nie wymaga inicjalizacji ani
+migracji; odświeżenie strony usuwa bieżące odpowiedzi. Zadania mają angielskie
+polecenia i podpunkty z DOCX. Nauka objaśnia je po polsku; w ćwiczeniach
+tłumaczenie jest na żądanie, a sprawdzian (17 zadań) nie daje podpowiedzi.
+Można wybrać oryginalne liczby lub nowe warianty. Pisemne uzasadnienia wymagają
+sprawdzenia z dorosłym według wzoru odpowiedzi. Materiał, poprawki klucza
+i krótki odbiór ręczny: [Cambridge Unit 3](docs/CAMBRIDGE-UNIT3.md).
+
 1. Utwórz profil: ksywka, opcjonalne imię, avatar, hasło i powtórzenie.
    Zgoda na ranking jest domyślnie wyłączona. Po ekranie powitalnym kliknij „Zaczynamy!”.
 2. W Quizach wybierz Naukę lub Test. Poprawne pary w Nauce znikają; błędne mają
@@ -67,6 +77,7 @@ Limity zestawów: tytuł 2–100, pojęcie 1–140, opis 2–700 znaków, 2–40
 ```sh
 python3 tests/run.py
 node tests/client.cjs
+node tests/unit3.cjs
 node --check public/assets/app.js
 find src public bin tests -name '*.php' -exec php -l {} \;
 git diff --check

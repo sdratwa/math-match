@@ -318,11 +318,12 @@
     ],
     [
       "term",
-      "18 to pierwszy term, a 25 to drugi term. W ciągu rysunków jeden cały rysunek też może być term."
+      "18 to pierwszy term, a 25 to drugi term.\nW ciągu rysunków jeden cały rysunek też może być term. Spójrz na przykład poniżej: za każdym razem dodajemy jeden rząd i jedną kolumnę.\nTerm 2 to cały drugi rysunek — wszystkie 4 małe kwadraty razem, a nie jeden z nich.",
+      { "kind": "patterns", "shape": "square", "ns": [1, 2, 3], "label": "Term" }
     ],
     [
       "linear",
-      "18, 25, 32, 39 to linear sequence: za każdym razem dodajemy tyle samo, czyli 7. W 20, 17, 14 odejmujemy po 3 — to też linear sequence."
+      "18, 25, 32, 39 to linear sequence: za każdym razem dodajemy tyle samo, czyli 7.\nW 20, 17, 14 odejmujemy po 3 — to też linear sequence."
     ],
     [
       "rule",

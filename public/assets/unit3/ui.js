@@ -72,11 +72,14 @@
     const familiar = el('section', 'panel familiar-definitions');
     familiar.append(el('h2', '', 'To już znasz — użyj definicji'),
       el('p', 'small', 'Zobacz, jak znane słowo pomaga w tym zadaniu. Dotknij angielskiej nazwy, jeśli chcesz przypomnieć sobie definicję ze szkoły.'));
-    C.definitionLinks[id].forEach(([key, bridge]) => {
+    C.definitionLinks[id].forEach(([key, bridge, diagram]) => {
       const definition = C.definitions[key], item = el('article', 'definition-bridge'), recall = el('details');
       const term = el('summary', '', definition.term); term.lang = 'en';
       const quote = el('blockquote', 'school-definition', definition.definition); quote.lang = 'en';
-      recall.append(term, quote); item.append(recall, el('p', '', bridge)); familiar.append(item);
+      recall.append(term, quote); item.append(recall);
+      bridge.split('\n').forEach(paragraph => item.append(el('p', '', paragraph)));
+      if (diagram) item.append(visual(diagram));
+      familiar.append(item);
     });
     const card = el('section', 'panel'); card.append(el('h2', '', 'Krok po kroku'));
     const steps = el('ol', 'lesson-steps');
@@ -148,7 +151,7 @@
   function visual(spec) {
     if (spec.kind === 'patterns') {
       const group = el('div', 'pattern-series');
-      spec.ns.forEach(n => { const item = el('div'); item.append(el('p', 'pattern-label', `Pattern ${n}`), visual({kind:spec.shape,n})); group.append(item); });
+      spec.ns.forEach(n => { const item = el('div'), label = el('p', 'pattern-label', `${spec.label || 'Pattern'} ${n}`); label.lang = 'en'; item.append(label, visual({kind:spec.shape,n})); group.append(item); });
       return group;
     }
     const figure = el('figure', 'diagram'); figure.lang = 'en';

@@ -15,8 +15,8 @@ header('Cache-Control: no-store');
   <meta name="theme-color" content="#edf4ff">
   <title>Cambridge Unit 3 — Math Match</title>
   <link rel="stylesheet" href="assets/unit3/unit3.css?v=7">
-  <script src="assets/unit3/core.js?v=7" defer></script>
-  <script src="assets/unit3/ui.js?v=7" defer></script>
+  <script src="assets/unit3/core.js?v=8" defer></script>
+  <script src="assets/unit3/ui.js?v=8" defer></script>
 </head>
 <body>
   <div class="u3-shell">

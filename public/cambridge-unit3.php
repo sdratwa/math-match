@@ -14,9 +14,9 @@ header('Cache-Control: no-store');
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#edf4ff">
   <title>Cambridge Unit 3 — Math Match</title>
-  <link rel="stylesheet" href="assets/unit3/unit3.css?v=4">
-  <script src="assets/unit3/core.js?v=4" defer></script>
-  <script src="assets/unit3/ui.js?v=4" defer></script>
+  <link rel="stylesheet" href="assets/unit3/unit3.css?v=6">
+  <script src="assets/unit3/core.js?v=6" defer></script>
+  <script src="assets/unit3/ui.js?v=6" defer></script>
 </head>
 <body>
   <div class="u3-shell">

@@ -50,7 +50,7 @@
     for (const [icon, name, desc, fn] of [
       ['📖', 'Uczę się', 'Zrozum polecenia z arkusza po angielsku, z polskim objaśnieniem i przykładami.', () => topicsScreen('learn')],
       ['✏️', 'Ćwiczę', 'Zadania po angielsku. Tłumaczenie i podpowiedź tylko na życzenie. Sprawdzenie od razu.', () => topicsScreen('practice')],
-      ['⭐', 'Próbny sprawdzian', `${C.ids.length} zadań ze wszystkich 8 działów. Bez podpowiedzi, wynik na końcu.`, examIntro]
+      ['⭐', 'Próbny sprawdzian', 'Wybierz jedną sekcję albo cały arkusz. Bez podpowiedzi, wynik na końcu.', examMenu]
     ]) {
       const b = button('', fn); b.className = 'mode-card'; b.append(el('span', 'mode-icon', icon), el('strong', '', name), el('span', '', desc)); modes.append(b);
     }
@@ -69,9 +69,22 @@
   function lesson(id) {
     session = null; language(false); const t = C.topics.find(t => t.id === id);
     title(`${t.icon} ${t.title}`, t.en);
-    const card = el('section', 'panel'); t.text.forEach(p => card.append(el('p', '', p)));
-    if (t.diagram) card.append(visual(t.diagram));
-    card.append(el('h2', '', 'Popatrz na przykład'), el('p', 'worked', t.example), el('p', 'notice', t.tip));
+    const card = el('section', 'panel'); card.append(el('h2', '', 'Krok po kroku'));
+    const steps = el('ol', 'lesson-steps');
+    t.text.forEach((text, i) => {
+      const step = el('li'); step.append(el('p', '', text));
+      if (t.stepDiagrams?.[i]) step.append(visual(t.stepDiagrams[i]));
+      steps.append(step);
+    });
+    card.append(steps, el('h2', '', 'Policzmy razem'));
+    const example = el('div', 'worked'); t.example.split('\n').forEach(line => example.append(el('p', '', line)));
+    card.append(example, el('p', 'notice', t.tip));
+    if (t.check) {
+      const recall = el('section', 'lesson-recall');
+      recall.append(el('h2', '', 'Teraz Ty — powiedz lub policz'), el('p', '', t.check.question));
+      const answer = el('details'); answer.append(el('summary', '', 'Sprawdź odpowiedź'), el('p', '', t.check.answer));
+      recall.append(answer); card.append(recall);
+    }
     const guide = el('section', 'panel instruction-guide');
     guide.append(el('h2', '', 'Takie polecenia zobaczysz na sprawdzianie'), el('p', '', 'Najpierw przeczytaj zdanie po angielsku i powiedz, co masz zrobić. Dopiero potem rozwiń objaśnienie.'));
     C.instructions[id].forEach(([en, pl]) => {
@@ -83,16 +96,39 @@
     actions.append(button('Spróbuję samodzielnie', () => startPractice(id, 'learn')), button('Wszystkie tematy', () => topicsScreen('learn'), true));
     app.append(card, guide, actions);
   }
-  function examIntro() {
-    session = null; language(false); title('Próbny sprawdzian');
+  function sectionName(topic) {
+    const index = C.topics.findIndex(t=>t.id===topic);
+    return index < 0 ? 'Cały arkusz A–H' : `${'ABCDEFGH'[index]}. ${C.topics[index].en}`;
+  }
+  function questionCount(count) {
+    return `${count} ${count === 1 ? 'zadanie' : count < 5 ? 'zadania' : 'zadań'}`;
+  }
+  function examMenu() {
+    session = null; language(false); title('Ile chcesz zrobić teraz?', 'PRÓBNY SPRAWDZIAN');
+    app.append(el('p', 'intro', 'Możesz wybrać tylko jedną sekcję. Każde zadanie zawiera podpunkty, tak jak w arkuszu. Wynik zobaczysz po zakończeniu wybranej części.'));
+    const grid = el('div', 'topic-grid');
+    C.topics.forEach(t => {
+      const ids = C.examIds(t.id), numbers = ids.map(id=>id.slice(1));
+      const b = button('', () => examIntro(t.id)); b.className = 'topic-card secondary';
+      const name = el('strong', '', sectionName(t.id)); name.lang = 'en';
+      b.append(el('span', 'topic-icon', t.icon), name, el('span', '', t.title),
+        el('span', 'small', `${questionCount(ids.length)} z podpunktami · Numery w arkuszu: ${numbers.join(', ')}`));
+      grid.append(b);
+    });
+    app.append(grid, button('Cały arkusz A–H — 17 zadań', () => examIntro('all'), true));
+  }
+  function startExam(topic, original = false) { start('exam', topic, C.exam(Math.random, original, topic)); }
+  function examIntro(topic = 'all') {
+    session = null; language(false); title(sectionName(topic), 'PRÓBNY SPRAWDZIAN');
     const card = el('section', 'panel');
-    card.append(el('p', 'intro', `${C.ids.length} zadań. Wszystkie 8 działów arkusza. Możesz wracać do wcześniejszych pytań i poprawiać odpowiedzi.`));
+    card.append(el('p', 'intro', `${questionCount(C.examIds(topic).length)} z podpunktami. ${topic === 'all' ? 'Wszystkie 8 sekcji.' : 'Tylko wybrana sekcja.'} Możesz wracać do wcześniejszych pytań i poprawiać odpowiedzi.`));
     const list = el('ul');
     ['Nie ma limitu czasu — możesz pracować spokojnie.', 'Nie pokażemy podpowiedzi ani poprawnych odpowiedzi przed końcem.', 'Możesz pominąć zadanie. Puste odpowiedzi pokażemy w raporcie jako do powtórzenia.', 'Nie odświeżaj i nie zamykaj strony: odpowiedzi nie są trwale zapisywane.'].forEach(x => list.append(el('li', '', x)));
     card.append(list, el('p', 'notice', 'Cały sprawdzian jest po angielsku, z podpunktami jak w DOCX. Uzasadnienia wpisz po angielsku lub jako rachunek. Automat sprawdzi liczby i krótkie reguły; pisemne uzasadnienia porównacie z dorosłym ze wzorem po oddaniu pracy.'));
     const actions = el('div', 'actions');
-    actions.append(button('Sprawdzian — nowe liczby', () => start('exam', 'all', C.exam())),
-      button('Arkusz z DOCX — oryginalne liczby', () => start('exam', 'all', C.exam(Math.random, true)), true));
+    actions.append(button('Sprawdzian — nowe liczby', () => startExam(topic)),
+      button('Liczby z DOCX', () => startExam(topic, true), true),
+      button('Wybierz inną sekcję', examMenu, true));
     card.append(actions); app.append(card);
   }
   function startPractice(topic, mode = 'practice') { start(mode, topic, C.practice(topic)); }
@@ -188,7 +224,7 @@
       input.lang = 'en'; input.spellcheck = false; input.autocomplete = 'off'; input.setAttribute('aria-label', field.label);
       input.value = typeof saved === 'string' ? saved : '';
       input.addEventListener('input', () => set(input.value));
-      group.append(input, el('p', 'small', 'Write in English. You can include calculations. Your explanation will be compared with a model answer after checking or finishing.'));
+      group.append(input, el('p', 'small', 'Write in English or show your calculation. After checking, read your answer with an adult.'));
     } else {
       const input = el('input', 'number-input'); input.type = 'text'; input.id = field.id; input.autocomplete = 'off'; input.spellcheck = false;
       const text = ['set','prime-pair','rule','term'].includes(field.kind);
@@ -197,7 +233,7 @@
       input.setAttribute('aria-label', field.label);
       input.addEventListener('input', () => set(input.value)); group.append(input);
       if (!inline && ['set','prime-pair'].includes(field.kind)) group.append(el('p', 'small', 'Separate numbers with commas or spaces. Order does not matter. Do not repeat numbers.'));
-      if (!inline && field.kind === 'rule') group.append(el('p', 'small', 'Answer format: Add … / Subtract … / +… / −… (use a number in place of …).'));
+      if (!inline && field.kind === 'rule') group.append(el('p', 'small', 'Write Add or Subtract, then the number. You can also use + or − before the number.'));
     }
     return group;
   }
@@ -213,7 +249,7 @@
   function questionScreen() {
     language(true);
     const s = session, q = s.questions[position], test = s.mode === 'exam', topic = C.topics.find(t => t.id === q.topic);
-    title(topic.en, `${test ? 'PRACTICE TEST' : 'PRACTICE'} · QUESTION ${position + 1} OF ${s.questions.length} · WORKBOOK ${q.number}`);
+    title(sectionName(topic.id), `${test ? 'PRACTICE TEST' : 'PRACTICE'} · QUESTION ${position + 1} OF ${s.questions.length} · WORKBOOK ${q.number}`);
     const progress = el('progress'); progress.max = s.questions.length; progress.value = position + 1; progress.setAttribute('aria-label', 'Question position'); app.append(progress);
     if (test) app.append(el('p', 'notice', 'Read each question carefully. Show your working where you can. Use the space provided. Answers will be shown after you finish.'));
     const card = el('section', 'panel');
@@ -245,7 +281,7 @@
       if (!result.manual && !result.correct) {
         const raw = s.answers[position][f.id];
         const blank = raw == null || String(raw).trim() === '' || Array.isArray(raw) && !raw.length || f.kind === 'sticks' && raw === 0;
-        view.message.textContent = `${blank ? 'No answer yet. ' : !result.valid ? 'Check the answer format. ' : ''}Correct answer: ${C.expectedText(f)}`;
+        view.message.textContent = `${blank ? 'No answer yet. ' : !result.valid ? 'Write your answer as shown in the instructions. ' : ''}Correct answer: ${C.expectedText(f)}`;
         view.message.hidden = false;
       }
       view.group.setAttribute('aria-describedby', view.badge.id + (view.message.hidden ? '' : ' ' + view.message.id));
@@ -281,7 +317,7 @@
           } else line.append(document.createTextNode(token.text));
         });
         section.append(line);
-        if (p.fields.some(f=>placed.has(f.id) && f.kind==='rule')) section.append(el('p', 'small', 'Answer format: Add … / Subtract … / +… / −… (use a number in place of …).'));
+        if (p.fields.some(f=>placed.has(f.id) && f.kind==='rule')) section.append(el('p', 'small', 'Write Add or Subtract, then the number. You can also use + or − before the number.'));
         if (p.fields.some(f=>placed.has(f.id) && ['set','prime-pair'].includes(f.kind))) section.append(el('p', 'small', 'Separate numbers with commas or spaces. Order does not matter. Do not repeat numbers.'));
       } else if (p.prompt) section.append(el('h3', '', p.prompt));
       if (p.visual?.kind === 'answer-table') {
@@ -340,12 +376,12 @@
       q.fields.forEach((f, i) => {
         showFieldResult(f, r.fields[i]);
         if (r.fields[i].manual) {
-          feedback.append(el('p', 'manual-review', `${f.label} — ${r.fields[i].valid ? 'Not automatically graded.' : 'No explanation entered.'} Model answer: ${C.expectedText(f)}`));
+          feedback.append(el('p', 'manual-review', `${f.label} — ${r.fields[i].valid ? 'Read this with an adult.' : 'You have not explained yet.'} Example answer: ${C.expectedText(f)}`));
         }
       });
       feedback.append(workedSolution(q));
-      if (r.manual) feedback.append(el('p', 'notice', 'Compare the meaning of your explanation with the model answer, with an adult. Different words or valid calculations can be correct. Written explanations have not been graded.'));
-      feedback.append(el('p', 'small', 'You can change your answer and check again. The report keeps your first attempt.'));
+      if (r.manual) feedback.append(el('p', 'notice', 'Ask an adult to read your explanation with you. Does it explain why? Your words can be different from the example. The computer has not checked this part.'));
+      feedback.append(el('p', 'small', 'You can fix your answer and check again. At the end, the report shows what you wrote the first time.'));
       next.disabled = false;
     }
     form.addEventListener('submit', e => { e.preventDefault(); if (!test) checkAnswer(); });
@@ -372,7 +408,7 @@
     const answers = test ? s.answers : s.first.map(first => first?.answers || {});
     const rows = C.report(s.questions, answers), points = rows.reduce((n, r) => n + r.points, 0), total = rows.reduce((n, r) => n + r.total, 0), manual = rows.reduce((n, r) => n + r.manual, 0);
     const helpedTopics = new Set(s.questions.filter((q, i) => s.first[i]?.helped).map(q => q.topic));
-    title('Dobra praca! Zobacz, co już umiesz.', test ? 'WYNIK PRÓBNEGO SPRAWDZIANU' : 'PODSUMOWANIE ĆWICZEŃ');
+    title('Dobra praca! Zobacz, co już umiesz.', test ? `WYNIK SPRAWDZIANU · ${sectionName(s.topic)}` : 'PODSUMOWANIE ĆWICZEŃ');
     app.append(el('p', 'result-score', `${points} / ${total} odpowiedzi sprawdzanych automatycznie`), el('p', 'intro', test ? 'Wynik obejmuje liczby, wybory, rysunki i krótkie reguły. Nie jest pełną oceną sprawdzianu: uzasadnienia trzeba sprawdzić z dorosłym.' : 'Raport pokazuje pierwsze odpowiedzi. Poprawianie błędów też jest nauką! Tłumaczenia i podpowiedzi oznaczamy osobno.'));
     app.append(el('p', 'notice', `${manual} pisemnych uzasadnień do sprawdzenia z dorosłym. Ich poprawności automat nie ocenia — także wtedy, gdy pole jest puste. Rozwiń odpowiedzi i porównaj ich sens z angielskim wzorem.`));
     const root = el('div', 'report-grid');
@@ -399,7 +435,10 @@
       });
       details.append(workedSolution(q)); app.append(details);
     });
-    const actions = el('div', 'actions'); actions.append(button(test ? 'Nowy próbny sprawdzian' : 'Nowe liczby — kolejna runda', () => test ? start('exam', 'all', C.exam()) : startPractice(s.topic, s.mode)), button('Start modułu', home, true)); app.append(actions);
+    const actions = el('div', 'actions');
+    actions.append(button(test ? 'Ten sam zakres — nowe liczby' : 'Nowe liczby — kolejna runda', () => test ? startExam(s.topic) : startPractice(s.topic, s.mode)));
+    if (test) actions.append(button('Wybierz inną sekcję', examMenu, true));
+    actions.append(button('Start modułu', home, true)); app.append(actions);
   }
   home();
 })();

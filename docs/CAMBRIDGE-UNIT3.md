@@ -7,7 +7,12 @@ kont, historii ani rankingu. Odświeżenie lub zamknięcie strony usuwa odpowied
 
 ## Korzystanie
 
-- **Uczę się:** osiem tematów, polskie wyjaśnienia matematyki i rysunki oraz
+- **Uczę się:** osiem tematów, krótkie numerowane kroki na konkretnych liczbach,
+  rysunki przy omawianym kroku i pytanie kontrolne z odpowiedzią do odkrycia.
+  Patyczki uczą dokładania po 3, szafki — liczenia od końca pełnej kolumny,
+  ciągi — dopisywania liczb, a dzielniki — układania klocków w rzędy.
+  Nie używamy wzorów z literą „n” ani skrótu z granicą sprawdzania dzielników.
+  Pozostają polskie objaśnienia oraz
   sekcja „Takie polecenia zobaczysz na sprawdzianie”. Najpierw dziecko czyta
   angielskie polecenie z DOCX i mówi, co ma zrobić, potem rozwija polskie
   objaśnienie i przykład angielskiej odpowiedzi.
@@ -24,8 +29,11 @@ kont, historii ani rankingu. Odświeżenie lub zamknięcie strony usuwa odpowied
   rozwiązania potęg są rozdzielone na wiersze. Uzasadnienia mają neutralne ✎.
   Sprawdzenie jest natychmiastowe; raport pamięta pierwszą odpowiedź oraz użycie
   pomocy przed nią. Można poprawiać błędy.
-- **Próbny sprawdzian:** 17 zadań z podpunktami i kolejnością jak w DOCX,
-  wszystkie osiem działów, angielskie polecenia oraz nawigacja. Można wybrać
+- **Próbny sprawdzian:** najpierw wybór jednej sekcji A–H albo całego arkusza.
+  Sekcje mają odpowiednio A: 2, B: 1, C: 1, D: 2, E: 1, F: 1, G: 6, H: 3 zadania
+  z podpunktami. Pełny arkusz ma 17 zadań. Zachowana kolejność i podpunkty DOCX,
+  angielskie polecenia oraz nawigacja. Raport obejmuje tylko wybrany zakres,
+  a powtórzenie z nowymi liczbami zachowuje ten zakres. Można wybrać
   oryginalne liczby albo nowe losowe warianty. Nie ma tłumaczeń, podpowiedzi,
   ocen ani rozwiązań przed oddaniem. Można wracać i poprawiać odpowiedzi.
 - **Raport:** punktacja dotyczy wyłącznie odpowiedzi sprawdzanych automatycznie:
@@ -137,7 +145,10 @@ php -l public/cambridge-unit3.php
 3. Ćwiczę: bez kliknięcia pomocy polecenia są po angielsku. Otwórz tłumaczenie,
    zamknij je, wpisz odpowiedź, sprawdź i popraw. Regułę wpisz jako `Add 7`
    lub `+7` tam, gdzie krok rzeczywiście wynosi 7. Raport oznacza pomoc.
-4. Próbny sprawdzian → Arkusz z DOCX: sprawdź zadanie 2 (18,25,32,39; cztery
+4. Próbny sprawdzian → A. Number sequences → Liczby z DOCX: upewnij się,
+   że są tylko zadania 1–2, postęp 1/2 i 2/2, a raport dotyczy wyłącznie A.
+   Powtórka z nowymi liczbami nadal ma obejmować A. Wybierz też B (1 zadanie),
+   G (6 zadań) oraz cały arkusz (17). W wariancie z liczbami z DOCX: sprawdź zadanie 2 (18,25,32,39; cztery
    następne wyrazy; 74 należy do ciągu) i zadania 5–6 (poprawiony klucz).
    Wszystkie polecenia i nawigacja podczas pracy są angielskie; brak pomocy
    i oceny. Cofnij się: tekst uzasadnienia i liczby muszą pozostać.

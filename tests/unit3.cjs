@@ -127,6 +127,25 @@ assert.equal(C.inlineAnswers(original[6].parts[1]),null); // tabela ma własne k
 assert.equal(C.inlineAnswers(original[7].parts[0]),null); // siatka pozostaje interaktywna
 const rangePart={...original[16].parts[0],prompt:original[16].prompt};
 assert.equal(inlineText(rangePart),'Write one prime number between 40 and 50[f0], and one composite number between 40 and 50[f1]. Explain your choices.');
+// Krótki sprawdzian obejmuje dokładnie zadania sekcji, bez powtórek ćwiczeniowych.
+const sectionNumbers=[[1,2],[3],[4],[5,6],[7],[8],[9,10,11,12,13,14],[15,16,17]];
+for (const [index,topic] of C.topics.entries()) {
+  const ids=sectionNumbers[index].map(n=>'q'+n);
+  assert.deepEqual(C.examIds(topic.id),ids);
+  for(const originalNumbers of [false,true]) {
+    const exam=C.exam(rng(17),originalNumbers,topic.id);
+    assert.deepEqual(exam.map(q=>q.id),ids);
+    assert(exam.every(q=>q.topic===topic.id));
+    const r=C.report(exam,exam.map(answers));
+    assert.equal(r.length,1);assert.equal(r[0].topic,topic.id);
+    assert.equal(r[0].count,ids.length);assert.equal(r[0].points,r[0].total);
+    if(originalNumbers) assert.deepEqual(exam,original.filter(q=>q.topic===topic.id));
+  }
+}
+assert.deepEqual(C.examIds(),C.ids);
+assert.deepEqual(C.exam(rng(5)),C.exam(rng(5),false,'all'));
+assert.throws(()=>C.examIds('unknown'));
+assert.throws(()=>C.exam(rng(1),false,'unknown'));
 // Reguły mają jawny, ograniczony format; nie oceniamy dowolnej angielskiej prozy.
 const ruleQ=original[1];
 for(const value of ['Add 7','add 7 each time.','Increase by 7','+7','+ 7','ADD 7 EVERY TIME','add 7 to get the next term'])assert.equal(C.grade(ruleQ,{f0:value}).fields[0].correct,true,value);

@@ -6,39 +6,238 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
   const topics = [
-    { id: 'sequences', title: 'Ciągi liczbowe', en: 'Number sequences', icon: '🔢',
-      text: ['Ciąg (sequence) to liczby zapisane w ustalonej kolejności. Każda liczba to wyraz (term).', 'Reguła przejścia (term-to-term rule) mówi, co robisz, aby otrzymać następny wyraz. Sprawdź różnicę między sąsiednimi liczbami. Ciąg może rosnąć albo maleć.'],
-      example: '18, 25, 32, 39… Dodajemy 7. Dalej: 46, 53, 60, 67, 74. Liczba 74 należy do tego ciągu: od 18 wykonujemy 8 skoków po 7.',
-      tip: 'Nie sprawdzaj tylko, czy liczba dzieli się przez krok. Najpierw odejmij pierwszy wyraz.', diagram: { kind: 'sequence', values: [18, 25, 32, 39], step: 7 } },
-    { id: 'stairs', title: 'Schodki i rosnące wzory', en: 'Growing patterns and staircases', icon: '🪜',
-      text: ['W tym arkuszu schodki są symetryczne: na górze 1 kwadrat, pod nim 3, potem 5 i tak dalej.', 'Wzór numer 3 ma 1 + 3 + 5 = 9 kwadratów. Wzór numer n ma n × n kwadratów — to liczba kwadratowa (square number).', 'Arkusz liczy stopnie po obu zewnętrznych stronach: 2, 4, 6… We wzorze numer n jest 2 × n takich stopni. Nie myl stopni z liczbą kwadratów!'],
-      example: 'Wzór 4: 1 + 3 + 5 + 7 = 16 kwadratów i 8 zewnętrznych stopni. Kolejne liczby kwadratów: 1, 4, 9, 16, 25, 36.',
-      tip: 'Każda nowa warstwa ma o 2 kwadraty więcej niż poprzednia.', diagram: { kind: 'stairs', n: 4 } },
-    { id: 'rows', title: 'Szafki w rzędach', en: 'Numbering in rows', icon: '🗄️',
-      text: ['Rząd (row) jest poziomy, a kolumna (column) pionowa. Tutaj numerujemy W DÓŁ kolumny, a potem przechodzimy w prawo.', 'Przy 4 rzędach w każdym rzędzie dodajemy 4: rząd 3 to 3, 7, 11, 15…', 'Reszta (remainder) z dzielenia przez 4 wskazuje rząd. Uwaga: reszta 0 oznacza ostatni, czyli czwarty rząd.'],
-      example: '46 = 11 × 4 + 2 → rząd 2. 57 = 14 × 4 + 1 → rząd 1. 20 = 5 × 4 → rząd 4.',
-      tip: 'Możesz wykreślać pełne kolumny po 4 szafki i sprawdzić, ile zostaje.', diagram: { kind: 'rows', rows: 4, columns: 5 } },
-    { id: 'squares', title: 'Kwadraty liczb i potęgi', en: 'Squares and powers', icon: '🟪',
-      text: ['Kwadrat liczby (square) oznacza pomnożenie liczby przez nią samą. Mała dwójka to wykładnik (exponent).', '7² czytamy „seven squared”. To 7 × 7 = 49, a nie 7 × 2.', 'Kwadrat z 4 rzędami i 4 kolumnami ma 4 × 4 = 16 małych pól.'],
-      example: '6² = 36, 8² = 64, 7² = 49, 10² = 100. 9² = 9 × 9 = 81. 4² = 4 × 4 = 16.',
-      tip: 'Zapisz mnożenie, zanim policzysz wynik potęgi.', diagram: { kind: 'square', n: 4 } },
-    { id: 'sticks', title: 'Wzory z patyczków', en: 'Patterns made from sticks', icon: '🧩',
-      text: ['Pierwszy kwadrat potrzebuje 4 patyczków (sticks). Każdy dołączony kwadrat ma jeden wspólny bok (shared side) z poprzednim.', 'Dodajemy więc tylko 3 nowe patyczki. Kolejne liczby: 4, 7, 10, 13…', 'Dla n kwadratów: 4 + (n − 1) × 3. Odejmujemy 1, bo pierwszy kwadrat już policzyliśmy.'],
-      example: 'Wzór 10: 4 + 9 × 3 = 31 patyczków. Wzór 8: 4 + 7 × 3 = 25.',
-      tip: 'Nie mnożymy liczby połączonych kwadratów przez 4 — wspólnych boków nie liczymy dwa razy.', diagram: { kind: 'sticks', n: 4 } },
-    { id: 'triangles', title: 'Liczby trójkątne', en: 'Triangular number patterns', icon: '🔺',
-      text: ['Układ trójkątny ma rzędy długości 1, 2, 3 i tak dalej. To inny wzór niż symetryczne schodki!', 'Liczby trójkątne (triangular numbers) to 1, 3, 6, 10, 15, 21…', 'Dodajemy kolejno 2, potem 3, potem 4… Przyrost nie jest stały.'],
-      example: 'Wzór 4 ma 1 + 2 + 3 + 4 = 10 pól. Różnica 3 − 1 = 2, a 6 − 3 = 3.',
-      tip: 'Aby otrzymać następny wzór, dodaj cały nowy rząd.', diagram: { kind: 'triangle', n: 4 } },
-    { id: 'factors', title: 'Dzielniki i liczby pierwsze', en: 'Factors and prime numbers', icon: '🔍',
-      text: ['Dzielnik (factor) dzieli liczbę bez reszty. Szukaj par: 24 = 1 × 24 = 2 × 12 = 3 × 8 = 4 × 6.', 'Liczba pierwsza (prime number) ma dokładnie dwa dodatnie dzielniki: 1 i siebie. Liczba złożona (composite number) jest większa od 1 i ma więcej niż dwa dzielniki.', '1 nie jest ani pierwsza, ani złożona. 2 jest jedyną parzystą liczbą pierwszą.'],
-      example: 'Dzielniki 24: 1, 2, 3, 4, 6, 8, 12, 24. Pierwsze dzielniki 28 to 2 i 7. 31 jest pierwsza: nie dzieli się przez 2, 3 ani 5; większy najmniejszy dzielnik nie jest potrzebny, bo 6 × 6 > 31.',
-      tip: 'Sama nieparzystość nie wystarcza: 21 = 3 × 7 jest liczbą złożoną.' },
-    { id: 'mixed', title: 'Wyzwanie mieszane', en: 'Mixed challenge', icon: '⭐',
-      text: ['Przeczytaj polecenie i wybierz sposób: skoki w ciągu, wspólne boki czy dzielniki?', 'Sprawdź wynik innym sposobem. Możesz zapisać rachunki na kartce.', 'W odpowiedziach otwartych może być kilka dobrych liczb. Każda spełniająca warunki jest poprawna.'],
-      example: '6, 14, 22… zawiera 70, bo 70 − 6 = 64 = 8 × 8. Między 40 a 50 liczby pierwsze to 41, 43, 47; np. 44 jest złożona, bo 44 = 4 × 11.',
-      tip: 'Przy liczbach pierwszych znajdź dzielniki, a przy ciągu sprawdź pierwszy wyraz i wielkość skoku.' }
-  ];
+  {
+    "id": "sequences",
+    "title": "Ciągi liczbowe",
+    "en": "Number sequences",
+    "icon": "🔢",
+    "text": [
+      "Popatrz: 18, 25, 32, 39. To ciąg (sequence), czyli liczby ustawione po kolei. Jedna liczba w ciągu to wyraz (term).",
+      "Od 18 do 25 dodajemy 7. Od 25 do 32 też dodajemy 7. Sprawdź jeszcze: 32 + 7 = 39. Za każdym razem robimy to samo.",
+      "Term-to-term rule pyta: „Co robisz, żeby dostać następną liczbę?”. Tutaj odpowiedz: Add 7 each time. To znaczy: za każdym razem dodaj 7.",
+      "Next four terms to cztery następne liczby. Zacznij za ostatnią podaną: 39 + 7 = 46, potem 53, 60 i 67.",
+      "Is 74 in this sequence? pyta, czy dotrzemy do 74. Dopisuj liczby, dodając po 7. Po 67 dostaniesz 74, więc odpowiedź to Yes."
+    ],
+    "example": "Czy 75 też pasuje?\nPo 67 jest 74, a po 74 jest 81. Przeskakujemy 75, więc odpowiedź to No.\nMożesz napisać: No. The sequence goes from 74 to 81.",
+    "tip": "Czasem liczby maleją. W 20, 17, 14 za każdym razem odejmujesz 3: Subtract 3.",
+    "stepDiagrams": {
+      "1": {
+        "kind": "sequence",
+        "values": [
+          18,
+          25,
+          32,
+          39
+        ],
+        "step": 7
+      }
+    },
+    "check": {
+      "question": "W ciągu 5, 9, 13 co dodajesz? Jaka będzie następna liczba?",
+      "answer": "Dodaję 4: Add 4 each time. Następna liczba to 17."
+    }
+  },
+  {
+    "id": "stairs",
+    "title": "Schodki i rosnące wzory",
+    "en": "Growing patterns and staircases",
+    "icon": "🪜",
+    "text": [
+      "Pattern oznacza tutaj kolejny rysunek. Pattern 1 ma jeden kwadrat. Policz go.",
+      "Pattern 2 ma na górze 1 kwadrat, a pod nim 3. Razem: 1 + 3 = 4. Środkowy kwadrat na dole jest dokładnie pod górnym.",
+      "Pattern 3 ma rzędy po 1, 3 i 5 kwadratów. Razem: 1 + 3 + 5 = 9. Każdy nowy dolny rząd ma o 2 kwadraty więcej.",
+      "Zbuduj w myślach Pattern 4: pod rzędem z 5 kwadratów dodaj rząd z 7. Było 9 kwadratów, dodajesz 7, więc jest 16.",
+      "Squares to kwadraty, a steps to stopnie. Arkusz liczy stopnie po lewej i po prawej stronie razem: we wzorze 3 są 3 z lewej i 3 z prawej, czyli 6. Wzór 4 ma 4 + 4 = 8 stopni."
+    ],
+    "example": "Kwadraty: 1, 4, 9, 16.\nTo także wyniki: 1 × 1, 2 × 2, 3 × 3, 4 × 4. Dlatego nazywamy je square numbers.\nStopnie po obu stronach: 2, 4, 6, 8. Tutaj reguła to Add 2 each time.",
+    "tip": "Przed liczeniem sprawdź słowo w pytaniu: squares czy steps? To dwie różne odpowiedzi.",
+    "stepDiagrams": {
+      "0": {
+        "kind": "stairs",
+        "n": 1
+      },
+      "1": {
+        "kind": "stairs",
+        "n": 2
+      },
+      "2": {
+        "kind": "stairs",
+        "n": 3
+      },
+      "3": {
+        "kind": "stairs",
+        "n": 4
+      }
+    },
+    "check": {
+      "question": "Wzór 3 ma 9 kwadratów. Dokładasz na dole 7. Ile kwadratów ma wzór 4?",
+      "answer": "9 + 7 = 16 kwadratów. To nie liczba stopni!"
+    }
+  },
+  {
+    "id": "rows",
+    "title": "Szafki w rzędach",
+    "en": "Numbering in rows",
+    "icon": "🗄️",
+    "text": [
+      "Przesuń palec w prawo po liczbach 1, 5, 9. To rząd (row). Teraz przesuń palec w dół po 1, 2, 3, 4. To kolumna (column).",
+      "Tutaj najpierw numerujemy całą kolumnę w dół: 1, 2, 3, 4. Potem następną: 5, 6, 7, 8. Znajdź 14 — jest w drugim rzędzie.",
+      "Idź palcem w prawo po trzecim rzędzie: 3, 7, 11, 15, 19. Numery rosną o 4, bo każda kolumna ma cztery szafki.",
+      "Jak znaleźć szafkę 46 bez rysowania całej tabeli? 4 × 11 = 44. To koniec jedenastej kolumny, w rzędzie 4. Następna szafka, 45, wraca do rzędu 1. Szafka 46 jest tuż pod nią, w rzędzie 2.",
+      "Liczba 20 kończy pełną kolumnę: 4 × 5 = 20. Dlatego jest w rzędzie 4. Nie ma rzędu 0!"
+    ],
+    "example": "Słowo remainder oznacza resztę, czyli to, co zostaje po odliczeniu pełnych grup.\nPrzy 46 odliczamy 44 szafki w pełnych kolumnach. Zostają jeszcze 2: 45 i 46.\nPo angielsku: 44 is at the bottom. 45 is in row 1, so 46 is in row 2.",
+    "tip": "Gdy pytają o dziesięć pierwszych numerów w rzędzie, zacznij od numeru rzędu i dopisz dziewięć kolejnych, dodając po 4.",
+    "stepDiagrams": {
+      "0": {
+        "kind": "rows",
+        "rows": 4,
+        "columns": 5
+      }
+    },
+    "check": {
+      "question": "W którym rzędzie jest 12? A w którym 13?",
+      "answer": "12 kończy trzecią kolumnę: rząd 4. 13 zaczyna następną: rząd 1."
+    }
+  },
+  {
+    "id": "squares",
+    "title": "Kwadraty liczb i potęgi",
+    "en": "Squares and powers",
+    "icon": "🟪",
+    "text": [
+      "Spójrz na mały kwadrat: ma 3 rzędy, w każdym po 3 pola. Policz: 3 + 3 + 3 = 9. Krócej zapisujemy 3 × 3 = 9.",
+      "Zapis 3² oznacza właśnie 3 × 3. Czytamy go three squared. Mała dwójka mówi: pomnóż tę liczbę przez nią samą.",
+      "Teraz kwadrat z 4 rzędami po 4 pola. Policz rzędy: 4 + 4 + 4 + 4 = 16. Dlatego 4² = 4 × 4 = 16.",
+      "Find the value oznacza: oblicz wynik. Przy 7² zapisz 7 × 7 i policz 49. Nie mnożymy przez małą dwójkę!"
+    ],
+    "example": "9² means __ × __, so its value is __.\nPierwsza luka: 9. Druga luka: znowu 9. Ostatnia luka: wynik, czyli 81.\nCałe zdanie: 9² means 9 × 9, so its value is 81.",
+    "tip": "Nie musisz pamiętać trudnej nazwy małej dwójki. Najważniejsze: 5² oznacza 5 × 5.",
+    "stepDiagrams": {
+      "0": {
+        "kind": "square",
+        "n": 3
+      },
+      "2": {
+        "kind": "square",
+        "n": 4
+      }
+    },
+    "check": {
+      "question": "Co wpiszesz: 6² = __ × __ = __?",
+      "answer": "6 × 6 = 36."
+    }
+  },
+  {
+    "id": "sticks",
+    "title": "Wzory z patyczków",
+    "en": "Patterns made from sticks",
+    "icon": "🧩",
+    "text": [
+      "Zbuduj pierwszy kwadrat. Policz jego boki: góra, dół, lewy i prawy. Potrzebujesz 4 patyczków (sticks).",
+      "Dołącz drugi kwadrat z prawej. Jego lewy bok już jest — to prawy bok pierwszego kwadratu! Dodaj tylko górę, dół i nowy prawy bok: 3 patyczki. Razem 4 + 3 = 7.",
+      "Dołącz trzeci kwadrat. Znowu jeden bok już jest, więc dodajesz 3. Razem 7 + 3 = 10. Niebieskie boki na rysunku są wspólne — policz każdy tylko raz.",
+      "Dla czwartego kwadratu dodaj jeszcze 3: 10 + 3 = 13. Dla piątego dodaj kolejne 3: 13 + 3 = 16.",
+      "What is the term-to-term rule? pyta, co robisz za każdym razem. Odpowiedz: Add 3 each time."
+    ],
+    "example": "How many sticks are needed for Pattern 5?\nPierwszy kwadrat ma 4 patyczki. Dołączamy jeszcze 4 kwadraty, po 3 patyczki każdy.\nMożesz policzyć: 4 + 3 + 3 + 3 + 3 = 16.\nKrótszy zapis tego samego: 4 + 4 × 3 = 16.",
+    "tip": "Przy Pattern 10 pierwszy kwadrat już masz. Dołączysz jeszcze 9 kwadratów — dlatego dodajesz dziewięć razy po 3, a nie dziesięć.",
+    "stepDiagrams": {
+      "0": {
+        "kind": "sticks",
+        "n": 1
+      },
+      "1": {
+        "kind": "sticks",
+        "n": 2
+      },
+      "2": {
+        "kind": "sticks",
+        "n": 3
+      }
+    },
+    "check": {
+      "question": "Dwa połączone kwadraty mają 7 patyczków. Dokładasz trzeci kwadrat. Ile patyczków będzie razem?",
+      "answer": "7 + 3 = 10. Jeden bok nowego kwadratu już był, więc dołożyliśmy tylko 3 patyczki."
+    }
+  },
+  {
+    "id": "triangles",
+    "title": "Liczby trójkątne",
+    "en": "Triangular number patterns",
+    "icon": "🔺",
+    "text": [
+      "Zacznij od jednego pola. To Pattern 1.",
+      "Pod nim dodaj rząd z 2 polami. Razem: 1 + 2 = 3. To Pattern 2.",
+      "Dodaj na dole rząd z 3 polami. Były 3 pola, dodajesz 3: razem 6. To Pattern 3.",
+      "Następny rząd ma 4 pola. Było 6, dodajesz 4, więc jest 10. Potem dodasz rząd z 5 polami: 10 + 5 = 15.",
+      "Explain how the sequence grows pyta, jak rosną liczby. Nie dodajemy ciągle tej samej liczby! Dodajemy 2, potem 3, potem 4. Po angielsku: Add 2, then 3, then 4, and so on."
+    ],
+    "example": "Difference znaczy różnica: o ile następna liczba jest większa?\nOd 1 do 3 dodajemy 2. Możesz zapisać 3 − 1 = 2.\nOd 3 do 6 dodajemy 3. Możesz zapisać 6 − 3 = 3.",
+    "tip": "Tutaj rzędy mają 1, 2, 3, 4 pola. W schodkach z poprzedniej lekcji miały 1, 3, 5, 7 — obejrzyj oba rysunki i porównaj.",
+    "stepDiagrams": {
+      "0": {
+        "kind": "triangle",
+        "n": 1
+      },
+      "1": {
+        "kind": "triangle",
+        "n": 2
+      },
+      "2": {
+        "kind": "triangle",
+        "n": 3
+      },
+      "3": {
+        "kind": "triangle",
+        "n": 4
+      }
+    },
+    "check": {
+      "question": "Wzór 4 ma 10 pól. Następny rząd ma 5. Ile pól będzie w całym wzorze 5?",
+      "answer": "10 + 5 = 15 pól."
+    }
+  },
+  {
+    "id": "factors",
+    "title": "Dzielniki i liczby pierwsze",
+    "en": "Factors and prime numbers",
+    "icon": "🔍",
+    "text": [
+      "Masz 12 klocków. Możesz ułożyć 3 rzędy po 4 klocki: 3 × 4 = 12. Nic nie zostaje. Dlatego 3 i 4 są dzielnikami (factors) liczby 12.",
+      "Szukaj wszystkich par mnożenia dających 12: 1 × 12, 2 × 6, 3 × 4. Zbierz liczby z obu stron mnożenia. Dzielniki 12 to 1, 2, 3, 4, 6, 12. Każdą liczbę zapisz tylko raz.",
+      "Teraz weź 7 klocków. Przy rzędach po 2 zostaje 1 klocek: 2 + 2 + 2 + 1. Przy rzędach po 3 też zostaje 1: 3 + 3 + 1. Sprawdź też rzędy po 4, 5 i 6 — za każdym razem coś zostaje. Bez reszty pasują tylko 1 i 7. To liczba pierwsza (prime number).",
+      "Prime number ma dokładnie dwa dzielniki: 1 i samą siebie. Liczba 6 ma więcej: 1, 2, 3, 6. Nazywamy ją liczbą złożoną (composite number).",
+      "Uważaj na 1 i 2. Liczba 1 ma tylko jeden dzielnik, więc nie jest pierwsza ani złożona. Liczba 2 ma dzielniki 1 i 2, więc jest pierwsza.",
+      "Even to parzysta: klocki można połączyć w pary, bez zostawiania jednego. Odd to nieparzysta: jeden klocek zostaje. 2 jest parzysta i pierwsza. Każda większa liczba parzysta ma dodatkowy dzielnik 2, więc nie jest pierwsza."
+    ],
+    "example": "Write all the factors of 24. Szukamy par:\n1 × 24 = 24\n2 × 12 = 24\n3 × 8 = 24\n4 × 6 = 24\nZbieramy wszystkie różne liczby: 1, 2, 3, 4, 6, 8, 12, 24.",
+    "tip": "Liczba nieparzysta nie zawsze jest pierwsza. Na przykład 9 jest nieparzysta, ale 3 × 3 = 9, więc ma dzielniki 1, 3 i 9.",
+    "check": {
+      "question": "Dzielniki 5 to 1 i 5. Dzielniki 8 to 1, 2, 4 i 8. Która liczba jest prime, a która composite?",
+      "answer": "5 jest prime: ma dwa dzielniki. 8 jest composite: ma więcej niż dwa."
+    }
+  },
+  {
+    "id": "mixed",
+    "title": "Wyzwanie mieszane",
+    "en": "Mixed challenge",
+    "icon": "⭐",
+    "text": [
+      "Przeczytaj polecenie i znajdź znajome słowo. Sequence? Dopisuj następne liczby. Sticks? Pierwszy kwadrat ma 4 patyczki, a każdy następny dodaje 3.",
+      "Starts at 6 and increases by 8 oznacza: zacznij od 6 i dodawaj po 8. Zapisz po kolei: 6, 14, 22, 30, 38, 46, 54, 62, 70. Dotarliśmy do 70!",
+      "Prime czy composite? Wypisz dzielniki. Dokładnie dwa oznaczają prime. Więcej niż dwa oznacza composite.",
+      "Between 40 and 50 oznacza tutaj liczby od 41 do 49. Wybierz jedną pierwszą i jedną złożoną. Nie trzeba wypisywać wszystkich.",
+      "Explain your choices oznacza: napisz, dlaczego wybrałaś te liczby. Możesz użyć krótkiego zdania i rachunku."
+    ],
+    "example": "Przykładowa odpowiedź:\n43 is prime. Its only factors are 1 and 43.\n44 is composite because 4 × 11 = 44.\nCzyli: 43 ma tylko dwa dzielniki. A 44 da się otrzymać przez pomnożenie dwóch liczb większych od 1.",
+    "tip": "Show how you know: pokaż, jak doszłaś do odpowiedzi. Możesz wypisać ciąg albo napisać rachunek. Samo Yes lub No nie wyjaśnia sposobu.",
+    "check": {
+      "question": "Ciąg zaczyna się od 2. Dodawaj po 5. Czy pojawi się 17? A 18?",
+      "answer": "2, 7, 12, 17, 22. Tak dla 17. Nie dla 18 — przeskakujemy ją między 17 a 22."
+    }
+  }
+];
   const integer = (rng, min, max) => min + Math.floor(rng() * (max - min + 1));
   function shuffled(values, rng = Math.random) {
     const a = [...values];
@@ -69,28 +268,28 @@
       ['Each sequence increases by the same amount each time. Complete the missing numbers.', 'Każdy ciąg rośnie o tę samą liczbę. Uzupełnij luki. Najpierw znajdź różnicę między sąsiednimi liczbami.'],
       ['What is the term-to-term rule?', 'Jak przechodzisz od jednej liczby do następnej? Napisz np. „Add 7” (dodaj 7), a nie kolejny wyraz ciągu.'],
       ['Write the next four terms:', 'Napisz cztery kolejne wyrazy, zaczynając ZA ostatnią podaną liczbą. Term to wyraz ciągu.'],
-      ['Is 74 in this sequence? Explain how you know.', 'Czy 74 należy do ciągu? Oprócz Yes/No podaj rachunek lub wyjaśnienie. „Yes, because 74 = 18 + 8 × 7.”']
+      ['Is 74 in this sequence? Explain how you know.', 'Czy 74 należy do ciągu? Oprócz Yes/No pokaż, jak liczysz. „Yes. After 67 comes 74.” — Tak. Po 67 jest 74.']
     ],
     stairs: [
       ['How many squares will Pattern 4 have if the staircase continues in the same way?', 'Ile kwadratów będzie w czwartym wzorze, jeśli zachowamy sposób budowania? Squares to kwadraty, nie stopnie.'],
-      ['What do you notice about the numbers in this sequence?', 'Jaką własność widzisz? „They are square numbers.” — To liczby kwadratowe.'],
+      ['What do you notice about the numbers in this sequence?', 'Co mają wspólnego te liczby? „They are square numbers.” — To liczby kwadratowe.'],
       ['Describe the rule for the number of steps.', 'Opisz regułę liczby stopni. „Add 2 each time.” — Za każdym razem dodaj 2.']
     ],
     rows: [
       ['The numbers go down each column before moving to the next column:', 'Numery biegną w dół kolumny, potem przechodzą do kolejnej. Row = poziomy rząd, column = pionowa kolumna.'],
       ['Write the first ten locker numbers in row 3:', 'Wypisz dziesięć pierwszych numerów szafek z rzędu 3. First ten oznacza dziesięć od początku.'],
-      ['Explain a quick way to work it out without listing every locker.', 'Wyjaśnij szybki sposób bez wypisywania wszystkich szafek. „Divide by 4. The remainder tells me the row.” Remainder = reszta.'],
+      ['Explain a quick way to work it out without listing every locker.', 'Znajdź koniec pełnej kolumny blisko szukanego numeru, a potem policz dalej. Dla 46: „44 is at the bottom. 45 is in row 1, so 46 is in row 2.”'],
       ['Is the child correct? Explain.', 'Czy dziecko ma rację? Odpowiedz Yes/No i uzasadnij, podając prawidłowy rząd.']
     ],
     squares: [
       ['Find the value of each square number.', 'Oblicz każdy kwadrat liczby. 7² czytamy „seven squared”; liczymy 7 × 7.'],
-      ['9² means ______ × ______, so its value is ______.', '9² oznacza __ × __, więc jego wartość to __. Wpisz dwa czynniki oraz wynik. Means = oznacza, value = wartość.']
+      ['9² means ______ × ______, so its value is ______.', '9² oznacza __ × __, więc jego wartość to __. Wpisz dwie liczby, które mnożysz, a potem wynik. Means = oznacza, value = wartość.']
     ],
     sticks: [
       ['Each new square shares one side with the previous square.', 'Nowy kwadrat ma wspólny bok z poprzednim. Shares one side = ma jeden wspólny bok. Nie licz go drugi raz.'],
       ['Draw Pattern 5 in the space below.', 'Narysuj piąty wzór. Tutaj budujesz go przyciskami; na sprawdzianie narysuj na kartce.'],
       ['Complete the table.', 'Uzupełnij tabelę. Pattern number = numer wzoru; Number of sticks = liczba patyczków.'],
-      ['How many sticks are needed for Pattern 10? Show your working.', 'Ile potrzeba patyczków? Pokaż rachunek, np. „4 + 9 × 3 = 31”. Sama liczba nie wystarczy.']
+      ['How many sticks are needed for Pattern 10? Show your working.', 'Ile potrzeba patyczków? Pierwszy kwadrat ma 4. Dołącz jeszcze 9, każdy po 3 patyczki. Pokaż rachunek: „4 + 9 × 3 = 31”.']
     ],
     triangles: [
       ['Draw the next pattern (Pattern 4). Use dots or small squares.', 'Narysuj następny wzór, używając kropek lub małych kwadratów. Next = następny, dots = kropki.'],
@@ -99,10 +298,10 @@
     ],
     factors: [
       ['Write all the factors of 24.', 'Wypisz WSZYSTKIE dzielniki 24. All = wszystkie; factors = dzielniki.'],
-      ['Two one-digit whole numbers are both prime numbers. One is odd and one is even.', 'Dwie jednocyfrowe liczby całkowite są pierwsze. Jedna jest nieparzysta (odd), druga parzysta (even). One-digit = jednocyfrowa.'],
+      ['Two one-digit whole numbers are both prime numbers. One is odd and one is even.', 'Szukaj dwóch liczb pierwszych zapisanych jedną cyfrą, czyli mniejszych od 10. Jedna ma być nieparzysta (odd), druga parzysta (even). Whole numbers to liczby takie jak 0, 1, 2, 3 — bez ułamków.'],
       ['Circle all the prime numbers in this list.', 'Zakreśl wszystkie liczby pierwsze. Tutaj zaznacz je dotknięciem; na papierze otocz kółkiem.'],
       ['Explain how you know that 31 is a prime number.', 'Uzasadnij: „It has exactly two factors: 1 and 31.” — Ma dokładnie dwa dzielniki.'],
-      ['What is the name for a whole number greater than 1 that is not prime?', 'Jak nazywa się liczba całkowita większa od 1, która nie jest pierwsza? „A composite number.” Greater than = większa niż.'],
+      ['What is the name for a whole number greater than 1 that is not prime?', 'Jak nazywa się liczba bez ułamka, większa od 1, która nie jest pierwsza? „A composite number.” Greater than = większa niż.'],
       ['True or false? Explain your answer.', 'Prawda czy fałsz? Wybierz True/False, potem napisz dlaczego (Why?).']
     ],
     mixed: [
@@ -121,10 +320,24 @@
     return { id: 'q' + number, number, topic, prompt, pl, parts: grouped, fields: grouped.flatMap(p => p.fields), hint, explanation, params, visual };
   }
   function memberModel(start, step, target) {
-    const delta = target - start;
-    return delta % step === 0 ? `Yes. ${target} = ${start} + ${delta / step} × ${step}, so I reach it after ${delta / step} jumps.` : `No. ${target} − ${start} = ${delta}, which is not a multiple of ${step}. It falls between ${start + Math.floor(delta / step) * step} and ${start + Math.ceil(delta / step) * step}.`;
+    const terms = [start];
+    while (terms[terms.length - 1] < target) terms.push(terms[terms.length - 1] + step);
+    const last = terms[terms.length - 1];
+    return `Start at ${start}. Add ${step} each time: ${terms.join(', ')}.\n` +
+      (last === target ? `Yes. I reach ${target}, so it is in the sequence.` : `No. I go from ${terms[terms.length-2]} to ${last}. I skip ${target}.`);
   }
-  function rowModel(n) { return `${n} ÷ 4 leaves remainder ${n % 4}. ${n % 4 === 0 ? 'Remainder 0 means row 4.' : `So it is in row ${n % 4}.`}`; }
+  function rowModel(n) {
+    const row = rowOf(n,4), bottom = n - row;
+    if (row === 4) return `${n} = 4 × ${n/4}. It is at the bottom of a full column, in row 4.`;
+    if (bottom === 0) return `The first column is 1, 2, 3, 4. Locker ${n} is in row ${row}.`;
+    const next = Array.from({length:row},(_,i)=>`${bottom+i+1} is in row ${i+1}`).join(', ');
+    return `${bottom} = 4 × ${bottom/4}. That is the bottom of a full column. In the next column, ${next}.`;
+  }
+  function sticksModel(n) {
+    return `The first square uses 4 sticks. Add ${n-1} more squares, with 3 new sticks each.\n` +
+      `4 + ${(Array(n-1).fill(3)).join(' + ')} = ${3*n+1}.\n` +
+      `A shorter way to write it: 4 + ${n-1} × 3 = ${3*n+1}.`;
+  }
   const generators = {
     q1: (rng, original) => {
       const specs = original ? [[34,9,7,[2,4,6]], [115,10,6,[0,3,5]], [7,7,6,[3,4,5]], [96,-8,6,[3,4,5]]] : [
@@ -134,7 +347,7 @@
         'Każdy ciąg rośnie o tę samą liczbę. Uzupełnij brakujące liczby. Uwaga: w d) ciąg maleje — to nieścisłość arkusza.',
         specs.map(([start,step,length,missing],i) => part(`${'abcd'[i]})${i === 3 ? ' This sequence decreases by the same amount each time.' : ''}`, 'Uzupełnij luki w kolejności od lewej.',
           missing.map((j,k) => num(`Blank ${k+1}`, start+step*j)), { kind: 'sequence', values: Array.from({length},(_,j)=>missing.includes(j)?'____':start+step*j) })),
-        'Sprawdź różnicę między dwiema sąsiednimi podanymi liczbami. W d) odejmuj. Brak pierwszego wyrazu wymaga cofnięcia się o krok.',
+        'Sprawdź różnicę między dwiema sąsiednimi podanymi liczbami. W d) odejmuj. Jeśli brak pierwszej liczby, wykonaj działanie w drugą stronę: zamiast dodawać, odejmij.',
         specs.map(([s,d,l],i)=>`${'abcd'[i]}) ${d>0?'Add':'Subtract'} ${Math.abs(d)}: ${Array.from({length:l},(_,j)=>s+d*j).join(', ')}.`).join(' '), { specs });
     },
     q2: (rng, original) => {
@@ -144,7 +357,7 @@
         part('a) What is the term-to-term rule?', 'Jaka jest reguła przejścia między kolejnymi wyrazami?', [rule('Rule',step)]),
         part('b) Write the next four terms:', 'Napisz cztery następne wyrazy.', Array.from({length:4},(_,i)=>num(`Term ${i+1}`,start+(i+4)*step))),
         part(`c) Is ${target} in this sequence? Explain how you know.`, `Czy ${target} należy do ciągu? Uzasadnij.`, [yesno('Is it in the sequence?',(target-start)%step===0),written('Explain how you know.',memberModel(start,step,target))])
-      ], 'Term-to-term rule opisuje zmianę, np. „Add …”. Sprawdź różnicę. Dla c) odejmij początek od szukanej liczby i sprawdź podzielność przez krok.', `Add ${step} each time. Next four terms: ${[4,5,6,7].map(i=>start+i*step).join(', ')}. ${memberModel(start,step,target)}`, {start,step,target});
+      ], 'Odejmij pierwszą liczbę od drugiej. Sprawdź, czy tyle samo dodajesz do następnej. W c) dopisuj liczby, aż dojdziesz do szukanej liczby albo ją przeskoczysz.', `Add ${step} each time. Next four terms: ${[4,5,6,7].map(i=>start+i*step).join(', ')}. ${memberModel(start,step,target)}`, {start,step,target});
     },
     q3: (rng, original) => {
       const n=original?4:integer(rng,4,7);
@@ -155,7 +368,7 @@
           part('c) What do you notice about the numbers in this sequence?', 'Jaką własność tych liczb zauważasz?', [written('What do you notice?', 'They are square numbers: 1 × 1, 2 × 2, 3 × 3, and so on.')]),
           part('d) The number of steps in the staircases is: 2, 4, 6, ... Write the next three terms:', 'Liczba stopni to 2, 4, 6… Napisz trzy następne wyrazy.', [8,10,12].map((v,i)=>num(`Term ${i+1}`,v))),
           part('e) Describe the rule for the number of steps.', 'Opisz regułę liczby stopni.', [rule('Rule for steps',2)])
-        ], 'Squares to kwadraty, steps to stopnie obu zewnętrznych stron. Kwadraty liczymy n × n, stopnie 2 × n.', `Pattern ${n}: ${n} × ${n} = ${n*n} squares. Square numbers: 16, 25, 36. Steps: 8, 10, 12; add 2 each time.`, {n}, {kind:'patterns',shape:'stairs',ns:[1,2,3]});
+        ], 'Squares to kwadraty: licz rzędy po 1, 3, 5 i dalej, dodając po 2 do długości rzędu. Steps to stopnie: policz je z lewej i z prawej strony razem.', `Pattern ${n} has rows of ${Array.from({length:n},(_,i)=>2*i+1).join(', ')} squares.\nAdd the rows: ${Array.from({length:n},(_,i)=>2*i+1).join(' + ')} = ${n*n}.\nYou can also write ${n} × ${n} = ${n*n}.\nNext square numbers: 16, 25, 36.\nSteps on both sides: 8, 10, 12. Add 2 each time.`, {n}, {kind:'patterns',shape:'stairs',ns:[1,2,3]});
     },
     q4: (rng, original) => {
       const a=original?14:integer(rng,6,24), row=original?3:integer(rng,1,4), c=original?46:integer(rng,25,80), d=original?57:integer(rng,25,80), claim=original?2:integer(rng,1,4);
@@ -164,7 +377,7 @@
         part(`b) Write the first ten locker numbers in row ${row}:`, `Napisz pierwszych dziesięć numerów w rzędzie ${row}.`, Array.from({length:10},(_,i)=>num(`Locker ${i+1}`,row+4*i))),
         part(`c) In which row would locker ${c} be? Explain a quick way to work it out without listing every locker.`, `W którym rzędzie jest szafka ${c}? Wyjaśnij szybki sposób bez wypisywania wszystkich szafek.`, [num('Row',rowOf(c,4)),written('Explain a quick way.',rowModel(c))]),
         part(`d) A child says locker ${d} is in row ${claim}. Is the child correct? Explain.`, `Dziecko mówi, że szafka ${d} jest w rzędzie ${claim}. Czy ma rację? Wyjaśnij.`, [yesno('Is the child correct?',rowOf(d,4)===claim),written('Explain.',rowModel(d))])
-      ], 'W jednym rzędzie dodajemy 4. Reszta z dzielenia numeru przez 4 wskazuje rząd; reszta 0 oznacza rząd 4.', `${rowModel(a)} Row ${row}: ${Array.from({length:10},(_,i)=>row+4*i).join(', ')}. ${rowModel(c)} ${rowModel(d)}`, {a,row,c,d,claim}, {kind:'rows',rows:4,columns:5});
+      ], 'W jednym rzędzie dodajemy 4. Numery 4, 8, 12 i dalej co 4 kończą kolumnę w rzędzie 4. Po każdym z nich następny numer wraca do rzędu 1.', `a) ${rowModel(a)}\nb) Row ${row}: ${Array.from({length:10},(_,i)=>row+4*i).join(', ')}. Add 4 each time.\nc) ${rowModel(c)}\nd) ${rowModel(d)}`, {a,row,c,d,claim}, {kind:'rows',rows:4,columns:5});
     },
     q5: (rng, original) => {
       const ns=original?[6,8,7,10]:shuffled([3,4,5,6,7,8,9,10,11,12],rng).slice(0,4);
@@ -180,8 +393,8 @@
         part(`a) Draw Pattern ${build} in the space below.`, `Narysuj wzór ${build}. Tutaj zbuduj go przyciskami.`, [{kind:'sticks',label:'Build the pattern using − and +.',expected:build}]),
         part('b) Complete the table.', 'Uzupełnij tabelę: numer wzoru → liczba patyczków.', [1,2,3,4].map(n=>num(`Pattern ${n}`,3*n+1)), {kind:'answer-table'}),
         part('c) What is the term-to-term rule?', 'Jaka jest reguła przejścia?', [rule('Rule',3)]),
-        part(`d) How many sticks are needed for Pattern ${far}? Show your working.`, `Ile patyczków potrzeba do wzoru ${far}? Pokaż rachunek.`, [num('Number of sticks',3*far+1),written('Show your working.',`4 + (${far} − 1) × 3 = ${3*far+1}.`)])
-      ], 'Shared side to wspólny bok. Pierwszy kwadrat ma 4 patyczki, kolejne dodają po 3.', `Table: 4, 7, 10, 13. Add 3 each time. Pattern ${far}: 4 + ${far-1} × 3 = ${3*far+1} sticks.`, {build,far}, {kind:'patterns',shape:'sticks',ns:[1,2,3,4]});
+        part(`d) How many sticks are needed for Pattern ${far}? Show your working.`, `Ile patyczków potrzeba do wzoru ${far}? Pokaż rachunek.`, [num('Number of sticks',3*far+1),written('Show your working.',sticksModel(far))])
+      ], 'Shared side to wspólny bok. Pierwszy kwadrat ma 4 patyczki, kolejne dodają po 3.', `Table: 4, 7, 10, 13. Add 3 each time.\n${sticksModel(far)}`, {build,far}, {kind:'patterns',shape:'sticks',ns:[1,2,3,4]});
     },
     q8: () => make(8,'triangles','These patterns are made from squares. The number sequence starts 1, 3, 6, ...', 'Wzory składają się z kwadratów. Ciąg zaczyna się od 1, 3, 6…', [
       part('a) Draw the next pattern (Pattern 4). Use dots or small squares.', 'Narysuj następny wzór (4), używając kropek lub kwadratów.', [{kind:'grid',label:'Draw the pattern by selecting squares. Start each row on the left.',size:4,expected:cells('triangle',4).map(p=>p.join(','))}]),
@@ -192,7 +405,7 @@
     ], 'Kolejne rzędy mają 1, 2, 3… pola. W następnym wzorze dodaj cały kolejny rząd.', 'Pattern 4: 1 + 2 + 3 + 4 = 10 squares. Next numbers: 10, 15, 21. Differences: 3 − 1 = 2; 6 − 3 = 3.', {}, {kind:'patterns',shape:'triangle',ns:[1,2,3]}),
     q9: (rng, original) => {
       const n=original?24:[12,18,20,24,28,30,36][integer(rng,0,6)];
-      return make(9,'factors',`Write all the factors of ${n}.`, `Wypisz wszystkie dzielniki ${n}.`, [part('', '', [{kind:'set',label:'Factors',expected:factors(n)}])], 'All to wszystkie. Szukaj par mnożenia, zaczynając od 1 i samej liczby.', `Factors of ${n}: ${factors(n).join(', ')}.`, {n});
+      return make(9,'factors',`Write all the factors of ${n}.`, `Wypisz wszystkie dzielniki ${n}.`, [part('', '', [{kind:'set',label:'Factors',expected:factors(n)}])], 'All to wszystkie. Szukaj dwóch liczb, które po pomnożeniu dają liczbę z pytania. Zapisuj obie. Spróbuj kolejno: 1 × ?, 2 × ?, 3 × ?.', `Pairs that multiply to ${n}:\n${factors(n).filter(d=>d*d<=n).map(d=>`${d} × ${n/d} = ${n}`).join('\n')}\nCollect the numbers from the pairs. Factors of ${n}: ${factors(n).join(', ')}.`, {n});
     },
     q10: (rng, original) => {
       const n=original?28:[3,5,7][integer(rng,0,2)]*[2,4,6][integer(rng,0,2)];
@@ -205,27 +418,27 @@
     },
     q12: (rng, original) => {
       const n=original?31:[17,19,23,29,31,37,41,43,47][integer(rng,0,8)];
-      return make(12,'factors',`Explain how you know that ${n} is a prime number.`, `Wyjaśnij, skąd wiesz, że ${n} jest pierwsza.`, [part('', '', [written('Explain how you know.',`${n} has exactly two factors: 1 and ${n}. It is not divisible by 2, 3 or 5; 7 × 7 is greater than ${n}.`)])], 'Nie wystarczy napisać, że liczba jest nieparzysta. Uzasadnij liczbą dzielników.', `Prime means exactly two factors: 1 and the number itself. For ${n}, check divisibility by 2, 3 and 5.`, {n});
+      return make(12,'factors',`Explain how you know that ${n} is a prime number.`, `Wyjaśnij, skąd wiesz, że ${n} jest pierwsza.`, [part('', '', [written('Explain how you know.',`The only pair of whole numbers that multiplies to ${n} is 1 × ${n}. So its only factors are 1 and ${n}. It has exactly two factors, so it is prime.`)])], 'Spróbuj znaleźć dwie liczby, które po pomnożeniu dają liczbę z pytania. Dla liczby pierwszej pasuje tylko 1 razy ta liczba. Napisz, jakie są jej dwa dzielniki.', `Try pairs of whole numbers that multiply to ${n}. Only 1 × ${n} works. The two factors are 1 and ${n}, so ${n} is prime.`, {n});
     },
-    q13: () => make(13,'factors','What is the name for a whole number greater than 1 that is not prime?', 'Jak nazywa się liczba całkowita większa od 1, która nie jest pierwsza?', [part('', '', [{kind:'term',label:'Name',expected:'A composite number.'}])], 'To liczba złożona. Przypomnij sobie jej angielską nazwę.', 'A composite number has more than two factors.'),
+    q13: () => make(13,'factors','What is the name for a whole number greater than 1 that is not prime?', 'Jak nazywa się liczba bez ułamka, większa od 1, która nie jest pierwsza?', [part('', '', [{kind:'term',label:'Name',expected:'A composite number.'}])], 'To liczba złożona. Przypomnij sobie jej angielską nazwę.', 'A composite number has more than two factors.'),
     q14: () => make(14,'factors','True or false? Explain your answer.', 'Prawda czy fałsz? Uzasadnij odpowiedź.', [
       part('a) 1 is a prime number.', '1 jest liczbą pierwszą.', [{kind:'choice',label:'True or false?',options:['True','False'],expected:'False'},written('Why?','False. 1 has only one factor, but a prime number must have exactly two.')]),
-      part('b) Every even number is composite.', 'Każda liczba parzysta jest złożona.', [{kind:'choice',label:'True or false?',options:['True','False'],expected:'False'},written('Why?','False. 2 is even and prime, so it is a counterexample.')])
+      part('b) Every even number is composite.', 'Każda liczba parzysta jest złożona.', [{kind:'choice',label:'True or false?',options:['True','False'],expected:'False'},written('Why?','False. 2 is even, but its only factors are 1 and 2. So 2 is prime, not composite.')])
     ], 'Sprawdź liczbę dzielników 1. Pomyśl o liczbie 2, zanim zgodzisz się ze słowem every (każda).', 'Both statements are false. 1 is neither prime nor composite. 2 is the only even prime number.'),
     q15: (rng, original) => {
       const start=original?6:integer(rng,3,20), step=original?8:integer(rng,3,9), target=original?70:start+integer(rng,5,12)*step+(rng()<.5?0:1);
-      return make(15,'mixed',`A sequence starts at ${start} and increases by ${step} each time. Is ${target} in the sequence? Show how you know.`, `Ciąg zaczyna się od ${start} i rośnie o ${step}. Czy ${target} do niego należy? Pokaż, skąd wiesz.`, [part('', '', [yesno('Is it in the sequence?',(target-start)%step===0),written('Show how you know.',memberModel(start,step,target))])], 'Odejmij pierwszy wyraz od szukanej liczby i sprawdź, czy wynik jest wielokrotnością kroku.', memberModel(start,step,target), {start,step,target});
+      return make(15,'mixed',`A sequence starts at ${start} and increases by ${step} each time. Is ${target} in the sequence? Show how you know.`, `Ciąg zaczyna się od ${start} i rośnie o ${step}. Czy ${target} do niego należy? Pokaż, skąd wiesz.`, [part('', '', [yesno('Is it in the sequence?',(target-start)%step===0),written('Show how you know.',memberModel(start,step,target))])], 'Zacznij od pierwszej liczby i dodawaj tyle, ile mówi polecenie. Dopisuj liczby, aż dojdziesz do szukanej albo ją przeskoczysz.', memberModel(start,step,target), {start,step,target});
     },
     q16: (rng, original) => {
       const n=original?8:integer(rng,6,15);
-      return make(16,'mixed',`A pattern has 4 sticks in Pattern 1. Each new pattern uses 3 more sticks than the previous one. How many sticks are in Pattern ${n}?`, `Wzór 1 ma 4 patyczki. Każdy następny ma o 3 więcej. Ile jest we wzorze ${n}?`, [part('', '', [num('Number of sticks',3*n+1)])], 'Pierwszy wzór już ma 4 patyczki. Do wzoru n wykonujesz n − 1 skoków.', `4 + (${n} − 1) × 3 = ${3*n+1}.`, {n});
+      return make(16,'mixed',`A pattern has 4 sticks in Pattern 1. Each new pattern uses 3 more sticks than the previous one. How many sticks are in Pattern ${n}?`, `Wzór 1 ma 4 patyczki. Każdy następny ma o 3 więcej. Ile jest we wzorze ${n}?`, [part('', '', [num('Number of sticks',3*n+1)])], 'Zapisz: wzór 1 ma 4 patyczki, wzór 2 ma 7, wzór 3 ma 10. Dodawaj po 3, aż dojdziesz do numeru wzoru z pytania.', sticksModel(n), {n});
     },
     q17: (rng, original) => {
       const min=original?40:[20,30,40,50][integer(rng,0,3)], max=min+10, ps=Array.from({length:9},(_,i)=>min+i+1).filter(prime);
       return make(17,'mixed',`Write one prime number between ${min} and ${max}, and one composite number between ${min} and ${max}. Explain your choices.`, `Napisz jedną liczbę pierwszą i jedną złożoną między ${min} a ${max}. Uzasadnij oba wybory.`, [part('', '', [
         {kind:'range',label:'Prime number',min,max,prime:true}, {kind:'range',label:'Composite number',min,max,prime:false},
         written('Explain your choices.',`For example: ${ps[0]} has only two factors, 1 and ${ps[0]}. ${min+2} = 2 × ${(min+2)/2}, so it is composite. Other valid choices and explanations are accepted.`)
-      ])], 'Between oznacza tutaj pomiędzy granicami. Dla pierwszej podaj dwa dzielniki, dla złożonej mnożenie liczb większych od 1.', `Possible prime numbers: ${ps.join(', ')}. One possible composite number: ${min+2} = 2 × ${(min+2)/2}.`, {min,max});
+      ])], 'Wybierz liczby większe od pierwszej liczby w pytaniu i mniejsze od drugiej. Dla prime wypisz dwa dzielniki. Dla composite pokaż mnożenie, w którym obie liczby są większe od 1.', `Possible prime numbers: ${ps.join(', ')}. One possible composite number: ${min+2} = 2 × ${(min+2)/2}.`, {min,max});
     }
   };
   const ids = Object.keys(generators);
@@ -244,7 +457,15 @@
     while(selected.length<length) selected.push(...shuffled(pool,rng));
     return selected.slice(0,length).map(id=>generate(id,rng));
   }
-  function exam(rng = Math.random, original = false) { return ids.map(id=>generate(id,rng,original)); }
+  function examIds(topic = 'all') {
+    if (topic === 'all') return [...ids];
+    const selected = ids.filter((id,i)=>topicIds[i]===topic);
+    if (!selected.length) throw new Error('Nieznana sekcja sprawdzianu.');
+    return selected;
+  }
+  function exam(rng = Math.random, original = false, topic = 'all') {
+    return examIds(topic).map(id=>generate(id,rng,original));
+  }
   function parseInteger(raw) {
     if (typeof raw !== 'string' && typeof raw !== 'number') return null;
     const s=String(raw).trim();
@@ -335,5 +556,5 @@
         points:results.reduce((s,r)=>s+r.points,0),total:results.reduce((s,r)=>s+r.total,0),manual:results.reduce((s,r)=>s+r.manual,0)};
     }).filter(r=>r.count);
   }
-  return {inlineAnswers,topics,instructions,ids,generate,practice,exam,grade,report,expectedText,factors,prime,triangular,rowOf,cells,stickSegments,parseInteger};
+  return {examIds,inlineAnswers,topics,instructions,ids,generate,practice,exam,grade,report,expectedText,factors,prime,triangular,rowOf,cells,stickSegments,parseInteger};
 });
